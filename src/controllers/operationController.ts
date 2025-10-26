@@ -3,7 +3,7 @@ import Operation, { IOperation } from '../models/Operation';
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const ops = await Operation.find({ user: Number(req.user?.id) });
+    const ops = await Operation.find({ user: req.user?.id || '' });
     res.status(200).json({ success: true, count: ops.length, data: ops });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -13,7 +13,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
 export const getOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const op = await Operation.findById(req.params.id);
-    if (!op || op.user !== Number(req.user?.id)) {
+    if (!op || op.user !== req.user?.id) {
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
     }
@@ -25,8 +25,18 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
 
 export const createOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const opData = { ...req.body, user: Number(req.user?.id) };
-    const op = await Operation.create(opData as IOperation);
+    const opData: IOperation = {
+      title: req.body.title,
+      titleKey: req.body.titleKey,
+      amount: req.body.amount,
+      category: req.body.category,
+      categoryKey: req.body.categoryKey,
+      date: req.body.date || new Date(),
+      timestamp: req.body.timestamp,
+      type: req.body.type,
+      user: req.user?.id || ''
+    };
+    const op = await Operation.create(opData);
     res.status(201).json({ success: true, data: op });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
@@ -43,7 +53,7 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Проверяем, что операция принадлежит текущему пользователю
-    if (existingOp.user !== Number(req.user?.id)) {
+    if (existingOp.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
@@ -64,7 +74,7 @@ export const deleteOperation = async (req: Request, res: Response, _next: NextFu
       return;
     }
     
-    if (existingOp.user !== Number(req.user?.id)) {
+    if (existingOp.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
@@ -78,7 +88,7 @@ export const deleteOperation = async (req: Request, res: Response, _next: NextFu
 
 export const getBalance = async (req: Request, res: Response) => {
   try {
-    const ops = await Operation.find({ user: Number(req.user?.id) });
+    const ops = await Operation.find({ user: req.user?.id || '' });
     const balance = ops.reduce((sum, op) => sum + Number(op.amount), 0);
     res.status(200).json({ success: true, data: { balance, totalOperations: ops.length } });
   } catch (err: any) {

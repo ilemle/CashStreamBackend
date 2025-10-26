@@ -1,17 +1,18 @@
 import { pool } from '../config/database';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IGoal {
-  id?: number;
+  id?: string;
   title: string;
   target: number;
   current: number;
   deadline: string;
-  user: number;
+  user: string;
   createdAt?: Date;
 }
 
 class GoalModel {
-  static async find(filter: { user: string | number }): Promise<IGoal[]> {
+  static async find(filter: { user: string }): Promise<IGoal[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM goals WHERE user = ?',
       [filter.user]
@@ -19,7 +20,7 @@ class GoalModel {
     return rows as IGoal[];
   }
 
-  static async findById(id: string | number): Promise<IGoal | null> {
+  static async findById(id: string): Promise<IGoal | null> {
     const [rows] = await pool.execute(
       'SELECT * FROM goals WHERE id = ?',
       [id]
@@ -29,15 +30,15 @@ class GoalModel {
   }
 
   static async create(data: IGoal): Promise<IGoal> {
-    const [result] = await pool.execute(
-      'INSERT INTO goals (title, target, current, deadline, user) VALUES (?, ?, ?, ?, ?)',
-      [data.title, data.target, data.current, data.deadline, data.user]
+    const id = uuidv4();
+    await pool.execute(
+      'INSERT INTO goals (id, title, target, current, deadline, user) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.target, data.current, data.deadline, data.user]
     );
-    const insertResult = result as any;
-    return { ...data, id: insertResult.insertId };
+    return { ...data, id };
   }
 
-  static async findByIdAndUpdate(id: string | number, data: Partial<IGoal>): Promise<IGoal | null> {
+  static async findByIdAndUpdate(id: string, data: Partial<IGoal>): Promise<IGoal | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
@@ -57,7 +58,7 @@ class GoalModel {
     return this.findById(id);
   }
 
-  static async findByIdAndDelete(id: string | number): Promise<void> {
+  static async findByIdAndDelete(id: string): Promise<void> {
     await pool.execute('DELETE FROM goals WHERE id = ?', [id]);
   }
 }

@@ -1,8 +1,9 @@
 import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IUser {
-  id?: number;
+  id?: string;
   name: string;
   email: string;
   password: string;
@@ -11,17 +12,19 @@ export interface IUser {
 
 class UserModel {
   static async create(userData: IUser): Promise<IUser> {
+    // Генерируем UUID
+    const id = uuidv4();
+    
     // Хешируем пароль
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
 
-    const [result] = await pool.execute(
-      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-      [userData.name, userData.email, hashedPassword]
+    await pool.execute(
+      'INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)',
+      [id, userData.name, userData.email, hashedPassword]
     );
 
-    const insertResult = result as any;
-    return { ...userData, id: insertResult.insertId, password: hashedPassword };
+    return { ...userData, id, password: hashedPassword };
   }
 
   static async findOne(filter: { email: string }): Promise<IUser | null> {
@@ -31,7 +34,7 @@ class UserModel {
     return users[0] || null;
   }
 
-  static async findById(id: string | number): Promise<IUser | null> {
+  static async findById(id: string): Promise<IUser | null> {
     const [rows] = await pool.execute(
       'SELECT id, name, email, createdAt FROM users WHERE id = ?',
       [id]

@@ -1,17 +1,18 @@
 import { pool } from '../config/database';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IBudget {
-  id?: number;
+  id?: string;
   category: string;
   spent: number;
   budget: number;
   color: string;
-  user: number;
+  user: string;
   createdAt?: Date;
 }
 
 class BudgetModel {
-  static async find(filter: { user: string | number }): Promise<IBudget[]> {
+  static async find(filter: { user: string }): Promise<IBudget[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE user = ?',
       [filter.user]
@@ -19,7 +20,7 @@ class BudgetModel {
     return rows as IBudget[];
   }
 
-  static async findById(id: string | number): Promise<IBudget | null> {
+  static async findById(id: string): Promise<IBudget | null> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE id = ?',
       [id]
@@ -29,15 +30,15 @@ class BudgetModel {
   }
 
   static async create(data: IBudget): Promise<IBudget> {
-    const [result] = await pool.execute(
-      'INSERT INTO budgets (category, spent, budget, color, user) VALUES (?, ?, ?, ?, ?)',
-      [data.category, data.spent, data.budget, data.color, data.user]
+    const id = uuidv4();
+    await pool.execute(
+      'INSERT INTO budgets (id, category, spent, budget, color, user) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, data.category, data.spent, data.budget, data.color, data.user]
     );
-    const insertResult = result as any;
-    return { ...data, id: insertResult.insertId };
+    return { ...data, id };
   }
 
-  static async findByIdAndUpdate(id: string | number, data: Partial<IBudget>): Promise<IBudget | null> {
+  static async findByIdAndUpdate(id: string, data: Partial<IBudget>): Promise<IBudget | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
@@ -57,7 +58,7 @@ class BudgetModel {
     return this.findById(id);
   }
 
-  static async findByIdAndDelete(id: string | number): Promise<void> {
+  static async findByIdAndDelete(id: string): Promise<void> {
     await pool.execute('DELETE FROM budgets WHERE id = ?', [id]);
   }
 }

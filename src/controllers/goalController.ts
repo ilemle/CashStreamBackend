@@ -3,7 +3,7 @@ import Goal, { IGoal } from '../models/Goal';
 
 export const getGoals = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const goals = await Goal.find({ user: Number(req.user?.id) });
+    const goals = await Goal.find({ user: req.user?.id || '' });
     res.status(200).json({ success: true, count: goals.length, data: goals });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -12,7 +12,7 @@ export const getGoals = async (req: Request, res: Response, _next: NextFunction)
 
 export const createGoal = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const goalData = { ...req.body, user: Number(req.user?.id) };
+    const goalData = { ...req.body, user: req.user?.id || '' };
     const goal = await Goal.create(goalData as IGoal);
     res.status(201).json({ success: true, data: goal });
   } catch (err: any) {
@@ -28,7 +28,7 @@ export const updateGoal = async (req: Request, res: Response, _next: NextFunctio
       return;
     }
     
-    if (existingGoal.user !== Number(req.user?.id)) {
+    if (existingGoal.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
@@ -48,7 +48,7 @@ export const deleteGoal = async (req: Request, res: Response, _next: NextFunctio
       return;
     }
     
-    if (existingGoal.user !== Number(req.user?.id)) {
+    if (existingGoal.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }

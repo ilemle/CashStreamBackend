@@ -1,7 +1,8 @@
 import { pool } from '../config/database';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IOperation {
-  id?: number;
+  id?: string;
   title: string;
   titleKey?: string;
   amount: number;
@@ -10,12 +11,12 @@ export interface IOperation {
   date: Date | string;
   timestamp?: number;
   type: 'income' | 'expense';
-  user: number;
+  user: string;
   createdAt?: Date;
 }
 
 class OperationModel {
-  static async find(filter: { user: string | number }): Promise<IOperation[]> {
+  static async find(filter: { user: string }): Promise<IOperation[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM operations WHERE user = ? ORDER BY date DESC',
       [filter.user]
@@ -23,7 +24,7 @@ class OperationModel {
     return rows as IOperation[];
   }
 
-  static async findById(id: string | number): Promise<IOperation | null> {
+  static async findById(id: string): Promise<IOperation | null> {
     const [rows] = await pool.execute(
       'SELECT * FROM operations WHERE id = ?',
       [id]
@@ -33,15 +34,15 @@ class OperationModel {
   }
 
   static async create(data: IOperation): Promise<IOperation> {
-    const [result] = await pool.execute(
-      'INSERT INTO operations (title, titleKey, amount, category, categoryKey, date, timestamp, type, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [data.title, data.titleKey, data.amount, data.category, data.categoryKey, data.date, data.timestamp, data.type, data.user]
+    const id = uuidv4();
+    await pool.execute(
+      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.user]
     );
-    const insertResult = result as any;
-    return { ...data, id: insertResult.insertId };
+    return { ...data, id };
   }
 
-  static async findByIdAndUpdate(id: string | number, data: Partial<IOperation>): Promise<IOperation | null> {
+  static async findByIdAndUpdate(id: string, data: Partial<IOperation>): Promise<IOperation | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
@@ -61,7 +62,7 @@ class OperationModel {
     return this.findById(id);
   }
 
-  static async findByIdAndDelete(id: string | number): Promise<void> {
+  static async findByIdAndDelete(id: string): Promise<void> {
     await pool.execute('DELETE FROM operations WHERE id = ?', [id]);
   }
 }

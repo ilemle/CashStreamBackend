@@ -4,16 +4,13 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 
-import connectDB, { pool } from './config/database';
+import connectDB from './config/database';
 
 // Load environment variables
 dotenv.config();
 
 // Connect to database
 connectDB().catch(console.error);
-
-// Export pool for use in controllers
-export { pool };
 
 const app = express();
 const PORT = process.env.PORT || 3000;

@@ -1,54 +1,48 @@
-import mongoose, { Document, Model } from 'mongoose';
+import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
 
-export interface IUser extends Document {
+export interface IUser {
+  id?: number;
   name: string;
   email: string;
   password: string;
-  createdAt: Date;
-  matchPassword(enteredPassword: string): Promise<boolean>;
+  createdAt?: Date;
 }
 
-const UserSchema = new mongoose.Schema<IUser>({
-  name: {
-    type: String,
-    required: [true, 'Please add a name'],
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: [true, 'Please add an email'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-  },
-  password: {
-    type: String,
-    required: [true, 'Please add a password'],
-    minlength: 6,
-    select: false,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+class UserModel {
+  static async create(userData: IUser): Promise<IUser> {
+    // Хешируем пароль
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(userData.password, salt);
 
-// Хеширование пароля перед сохранением
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    next();
+    const [result] = await pool.execute(
+      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
+      [userData.name, userData.email, hashedPassword]
+    );
+
+    const insertResult = result as any;
+    return { ...userData, id: insertResult.insertId, password: hashedPassword };
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
 
-// Сравнение паролей
-UserSchema.methods.matchPassword = async function (enteredPassword: string): Promise<boolean> {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+  static async findOne(filter: { email: string }): Promise<IUser | null> {
+    let query = 'SELECT * FROM users WHERE email = ?';
+    const [rows] = await pool.execute(query, [filter.email]);
+    const users = rows as IUser[];
+    return users[0] || null;
+  }
 
-const User: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
+  static async findById(id: string | number): Promise<IUser | null> {
+    const [rows] = await pool.execute(
+      'SELECT id, name, email, createdAt FROM users WHERE id = ?',
+      [id]
+    );
+    const users = rows as IUser[];
+    return users[0] || null;
+  }
 
-export default User;
+  static async matchPassword(enteredPassword: string, hashedPassword: string): Promise<boolean> {
+    return await bcrypt.compare(enteredPassword, hashedPassword);
+  }
+}
 
+export default UserModel;

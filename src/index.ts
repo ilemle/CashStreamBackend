@@ -1,12 +1,19 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-require('dotenv').config();
+/// <reference types="./types/express" />
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
 
-const connectDB = require('./src/config/database');
+import connectDB, { pool } from './config/database';
 
-// Подключение к базе данных
-connectDB();
+// Load environment variables
+dotenv.config();
+
+// Connect to database
+connectDB().catch(console.error);
+
+// Export pool for use in controllers
+export { pool };
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.get('/', (req, res) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({ 
     message: 'Welcome to CashStream API',
     version: '1.0.0',
@@ -26,34 +33,34 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ 
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
 });
 
-// Routes
-const authRoutes = require('./src/routes/authRoutes');
-const operationRoutes = require('./src/routes/operationRoutes');
-const budgetRoutes = require('./src/routes/budgetRoutes');
-const goalRoutes = require('./src/routes/goalRoutes');
+// API Routes
+import authRoutes from './routes/authRoutes';
+import operationRoutes from './routes/operationRoutes';
+import budgetRoutes from './routes/budgetRoutes';
+import goalRoutes from './routes/goalRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/operations', operationRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
 
-// 404 обработчик
-app.use((req, res) => {
+// 404 handler
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'
   });
 });
 
-// Middleware для обработки ошибок (должен быть последним)
-const errorHandler = require('./src/middleware/errorHandler');
+// Error handler (must be last)
+import errorHandler from './middleware/errorHandler';
 app.use(errorHandler);
 
 // Start server
@@ -63,5 +70,5 @@ app.listen(PORT, () => {
   console.log(`📱 API: http://localhost:${PORT}/api`);
 });
 
-module.exports = app;
+export default app;
 

@@ -1,8 +1,17 @@
-const jwt = require('jsonwebtoken');
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+interface IDecodedToken {
+  id: string;
+}
 
 // Middleware для защиты роутов
-exports.protect = async (req, res, next) => {
-  let token;
+export const protect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  let token: string | undefined;
 
   // Проверяем наличие токена в headers
   if (
@@ -15,19 +24,20 @@ exports.protect = async (req, res, next) => {
 
   // Проверяем наличие токена
   if (!token) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
     });
+    return;
   }
 
   try {
     // Декодируем токен
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as IDecodedToken;
+    (req as any).user = { id: decoded.id };
     next();
   } catch (err) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
     });

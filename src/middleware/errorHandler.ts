@@ -4,13 +4,6 @@ interface ErrorWithStatus extends Error {
   statusCode?: number;
 }
 
-interface MongooseValidationError extends Error {
-  name: 'ValidationError';
-  errors: {
-    [key: string]: { message: string };
-  };
-}
-
 const errorHandler = (
   err: ErrorWithStatus,
   _req: Request,
@@ -22,24 +15,19 @@ const errorHandler = (
 
   console.error(err);
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 } as ErrorWithStatus;
-  }
-
-  // Mongoose duplicate key
-  const mongooseError = err as any;
-  if (mongooseError.code === 11000) {
+  // MySQL duplicate key
+  const mysqlError = err as any;
+  
+  // MySQL Error: Duplicate entry
+  if (mysqlError.code === 'ER_DUP_ENTRY') {
     const message = 'Duplicate field value entered';
     error = { message, statusCode: 400 } as ErrorWithStatus;
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const validationError = err as unknown as MongooseValidationError;
-    const message = Object.values(validationError.errors).map((val: any) => val.message);
-    error = { message: message.join(', '), statusCode: 400 } as ErrorWithStatus;
+  // MySQL Error: Row not found
+  if (mysqlError.code === 'ECONNREFUSED') {
+    const message = 'Database connection failed';
+    error = { message, statusCode: 503 } as ErrorWithStatus;
   }
 
   res.status(error.statusCode || 500).json({
@@ -49,4 +37,3 @@ const errorHandler = (
 };
 
 export default errorHandler;
-

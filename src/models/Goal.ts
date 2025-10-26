@@ -1,44 +1,65 @@
-import mongoose, { Document, Model } from 'mongoose';
+import { pool } from '../config/database';
 
-export interface IGoal extends Document {
+export interface IGoal {
+  id?: number;
   title: string;
   target: number;
   current: number;
   deadline: string;
-  user: mongoose.Types.ObjectId;
-  createdAt: Date;
+  user: number;
+  createdAt?: Date;
 }
 
-const GoalSchema = new mongoose.Schema<IGoal>({
-  title: {
-    type: String,
-    required: [true, 'Please add a goal title'],
-    trim: true,
-  },
-  target: {
-    type: Number,
-    required: [true, 'Please add a target amount'],
-  },
-  current: {
-    type: Number,
-    default: 0,
-  },
-  deadline: {
-    type: String,
-    required: [true, 'Please add a deadline'],
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+class GoalModel {
+  static async find(filter: { user: string | number }): Promise<IGoal[]> {
+    const [rows] = await pool.execute(
+      'SELECT * FROM goals WHERE user = ?',
+      [filter.user]
+    );
+    return rows as IGoal[];
+  }
 
-const Goal: Model<IGoal> = mongoose.model<IGoal>('Goal', GoalSchema);
+  static async findById(id: string | number): Promise<IGoal | null> {
+    const [rows] = await pool.execute(
+      'SELECT * FROM goals WHERE id = ?',
+      [id]
+    );
+    const goals = rows as IGoal[];
+    return goals[0] || null;
+  }
 
-export default Goal;
+  static async create(data: IGoal): Promise<IGoal> {
+    const [result] = await pool.execute(
+      'INSERT INTO goals (title, target, current, deadline, user) VALUES (?, ?, ?, ?, ?)',
+      [data.title, data.target, data.current, data.deadline, data.user]
+    );
+    const insertResult = result as any;
+    return { ...data, id: insertResult.insertId };
+  }
 
+  static async findByIdAndUpdate(id: string | number, data: Partial<IGoal>): Promise<IGoal | null> {
+    const sets: string[] = [];
+    const values: any[] = [];
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'id' && key !== 'user') {
+        sets.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+
+    values.push(id);
+    await pool.execute(
+      `UPDATE goals SET ${sets.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    return this.findById(id);
+  }
+
+  static async findByIdAndDelete(id: string | number): Promise<void> {
+    await pool.execute('DELETE FROM goals WHERE id = ?', [id]);
+  }
+}
+
+export default GoalModel;

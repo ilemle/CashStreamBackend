@@ -38,12 +38,18 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // API Routes
+import { currencyConverter } from './middleware/currency';
 import authRoutes from './routes/authRoutes';
 import operationRoutes from './routes/operationRoutes';
 import budgetRoutes from './routes/budgetRoutes';
 import goalRoutes from './routes/goalRoutes';
+import currencyRoutes from './routes/currencyRoutes';
+
+// Currency conversion middleware для всех API роутов
+app.use('/api', currencyConverter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/currencies', currencyRoutes);
 app.use('/api/operations', operationRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);

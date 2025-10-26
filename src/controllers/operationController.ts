@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import Operation, { IOperation } from '../models/Operation';
+import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const ops = await Operation.find({ user: req.user?.id || '' });
-    res.status(200).json({ success: true, count: ops.length, data: ops });
+    const opsWithConversion = await addCurrencyConversionToArray(ops, req);
+    res.status(200).json({ success: true, count: ops.length, data: opsWithConversion });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -17,7 +19,8 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
     }
-    res.status(200).json({ success: true, data: op });
+    const opWithConversion = await addCurrencyConversion(op, req);
+    res.status(200).json({ success: true, data: opWithConversion });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -37,7 +40,8 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       user: req.user?.id || ''
     };
     const op = await Operation.create(opData);
-    res.status(201).json({ success: true, data: op });
+    const opWithConversion = await addCurrencyConversion(op, req);
+    res.status(201).json({ success: true, data: opWithConversion });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -59,7 +63,8 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
-    res.status(200).json({ success: true, data: op });
+    const opWithConversion = await addCurrencyConversion(op || existingOp, req);
+    res.status(200).json({ success: true, data: opWithConversion });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -90,7 +95,18 @@ export const getBalance = async (req: Request, res: Response) => {
   try {
     const ops = await Operation.find({ user: req.user?.id || '' });
     const balance = ops.reduce((sum, op) => sum + Number(op.amount), 0);
-    res.status(200).json({ success: true, data: { balance, totalOperations: ops.length } });
+    const balanceWithConversion = await addCurrencyConversion({ amount: balance } as IOperation, req);
+    
+    res.status(200).json({ 
+      success: true, 
+      data: { 
+        balance, 
+        convertedBalance: balanceWithConversion.convertedAmount,
+        convertedCurrency: balanceWithConversion.convertedCurrency,
+        convertedCurrencyCode: balanceWithConversion.convertedCurrencyCode,
+        totalOperations: ops.length 
+      } 
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

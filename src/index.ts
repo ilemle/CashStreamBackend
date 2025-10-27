@@ -44,6 +44,7 @@ import operationRoutes from './routes/operationRoutes';
 import budgetRoutes from './routes/budgetRoutes';
 import goalRoutes from './routes/goalRoutes';
 import currencyRoutes from './routes/currencyRoutes';
+import categoryRoutes from './routes/categoryRoutes';
 
 // Currency conversion middleware для всех API роутов
 app.use('/api', currencyConverter);
@@ -53,6 +54,7 @@ app.use('/api/currencies', currencyRoutes);
 app.use('/api/operations', operationRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

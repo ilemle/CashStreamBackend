@@ -10,7 +10,11 @@ export interface IOperation {
   categoryKey?: string;
   date: Date | string;
   timestamp?: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
+  // Для переводов (transfer)
+  fromAccount?: string;
+  toAccount?: string;
+  currency?: string;  // Валюта операции (RUB, USD, EUR и т.д.)
   user: string;
   createdAt?: Date;
 }
@@ -36,8 +40,8 @@ class OperationModel {
   static async create(data: IOperation): Promise<IOperation> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.user]
+      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.user]
     );
     return { ...data, id };
   }
@@ -46,12 +50,19 @@ class OperationModel {
     const sets: string[] = [];
     const values: any[] = [];
 
+    // Поля, которые нельзя обновлять (вычисляемые или системные)
+    const excludedFields = ['id', 'user', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode'];
+
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'id' && key !== 'user') {
+      if (value !== undefined && !excludedFields.includes(key)) {
         sets.push(`${key} = ?`);
         values.push(value);
       }
     });
+
+    if (sets.length === 0) {
+      return this.findById(id);
+    }
 
     values.push(id);
     await pool.execute(

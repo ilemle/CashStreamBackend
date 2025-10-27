@@ -16,8 +16,8 @@ export const addCurrencyConversion = async <T extends { amount: number | string 
 
   const originalAmount = typeof data.amount === 'number' ? data.amount : parseFloat(data.amount.toString());
   
-  // Предполагаем, что основная валюта - RUB (можно сделать настраиваемой для пользователя)
-  const originalCurrency = 'RUB';
+  // Используем валюту операции (или RUB по умолчанию)
+  const originalCurrency = (data as any).currency || 'RUB';
   
   const { convertCurrency } = await import('./currencies');
   const convertedAmount = await convertCurrency(originalAmount, originalCurrency, secondaryCurrency);

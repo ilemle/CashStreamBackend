@@ -37,6 +37,9 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       date: req.body.date || new Date(),
       timestamp: req.body.timestamp,
       type: req.body.type,
+      fromAccount: req.body.fromAccount,
+      toAccount: req.body.toAccount,
+      currency: req.body.currency || 'RUB',  // Валюта операции
       user: req.user?.id || ''
     };
     const op = await Operation.create(opData);

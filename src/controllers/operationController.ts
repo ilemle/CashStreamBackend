@@ -1,6 +1,49 @@
 import { Request, Response, NextFunction } from 'express';
 import Operation, { IOperation } from '../models/Operation';
+import Budget from '../models/Budget';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
+
+// Вспомогательная функция для обновления бюджета
+async function updateBudgetSpent(userId: string, category: string, amount: number, operation: 'add' | 'subtract') {
+  try {
+    // Извлекаем основную категорию (до " > ")
+    // Например: "Путешествия > Авиабилеты" → "Путешествия"
+    const mainCategory = category.includes(' > ') ? category.split(' > ')[0] : category;
+    
+    console.log(`🔍 Looking for budget: "${mainCategory}" (original: "${category}")`);
+    
+    // Находим бюджет по категории и пользователю
+    const budgets = await Budget.find({ user: userId });
+    const budget = budgets.find(b => b.category === mainCategory);
+    
+    if (!budget || !budget.id) {
+      console.log(`⚠️ Budget not found for category: ${mainCategory}`);
+      console.log(`📋 Available budgets:`, budgets.map(b => b.category));
+      return;
+    }
+    
+    // Вычисляем новую сумму spent
+    const delta = operation === 'add' ? amount : -amount;
+    
+    // Детальное логирование для отладки
+    console.log(`📊 Budget calculation details:`);
+    console.log(`  - Current spent: ${budget.spent} (type: ${typeof budget.spent})`);
+    console.log(`  - Amount: ${amount} (type: ${typeof amount})`);
+    console.log(`  - Operation: ${operation}`);
+    console.log(`  - Delta: ${delta}`);
+    console.log(`  - budget.spent + delta: ${budget.spent + delta}`);
+    
+    const newSpent = Math.max(0, Number(budget.spent) + delta); // Принудительно конвертируем в число
+    
+    console.log(`💰 Updating budget spent: ${budget.category} (${budget.spent} → ${newSpent})`);
+    
+    // Обновляем бюджет
+    await Budget.findByIdAndUpdate(budget.id, { spent: newSpent });
+    console.log(`✅ Budget updated successfully!`);
+  } catch (error: any) {
+    console.error('❌ Error updating budget:', error.message);
+  }
+}
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -84,6 +127,12 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       user: req.user?.id || ''
     };
     const op = await Operation.create(opData);
+    
+    // Автоматически обновляем бюджет при создании операции расхода
+    if (op.type === 'expense' && op.category && op.user) {
+      await updateBudgetSpent(op.user, op.category, Math.abs(op.amount), 'add');
+    }
+    
     const opWithConversion = await addCurrencyConversion(op, req);
     res.status(201).json({ success: true, data: opWithConversion });
   } catch (err: any) {
@@ -106,7 +155,28 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
       return;
     }
     
+    // Если изменилась категория или сумма расхода, обновляем бюджеты
+    const oldCategory = existingOp.category;
+    const oldAmount = Math.abs(existingOp.amount);
+    const oldType = existingOp.type;
+    
+    const newCategory = req.body.category || oldCategory;
+    const newAmount = req.body.amount !== undefined ? Math.abs(req.body.amount) : oldAmount;
+    const newType = req.body.type || oldType;
+    
+    // Откатываем старую операцию из бюджета (если была расходом)
+    if (oldType === 'expense' && oldCategory && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, oldCategory, oldAmount, 'subtract');
+    }
+    
+    // Обновляем операцию
     const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
+    
+    // Добавляем новую операцию в бюджет (если расход)
+    if (newType === 'expense' && newCategory && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, newCategory, newAmount, 'add');
+    }
+    
     const opWithConversion = await addCurrencyConversion(op || existingOp, req);
     res.status(200).json({ success: true, data: opWithConversion });
   } catch (err: any) {
@@ -126,6 +196,11 @@ export const deleteOperation = async (req: Request, res: Response, _next: NextFu
     if (existingOp.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
+    }
+    
+    // Автоматически обновляем бюджет при удалении операции расхода
+    if (existingOp.type === 'expense' && existingOp.category && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, existingOp.category, Math.abs(existingOp.amount), 'subtract');
     }
     
     await Operation.findByIdAndDelete(req.params.id);

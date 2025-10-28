@@ -12,12 +12,21 @@ export interface IGoal {
 }
 
 class GoalModel {
+  // Вспомогательная функция для преобразования DECIMAL строк в числа
+  private static transformGoal(goal: any): IGoal {
+    return {
+      ...goal,
+      target: Number(goal.target),
+      current: Number(goal.current),
+    };
+  }
+
   static async find(filter: { user: string }): Promise<IGoal[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM goals WHERE user = ?',
       [filter.user]
     );
-    return rows as IGoal[];
+    return (rows as any[]).map(this.transformGoal);
   }
 
   static async findById(id: string): Promise<IGoal | null> {
@@ -25,8 +34,8 @@ class GoalModel {
       'SELECT * FROM goals WHERE id = ?',
       [id]
     );
-    const goals = rows as IGoal[];
-    return goals[0] || null;
+    const goals = rows as any[];
+    return goals[0] ? this.transformGoal(goals[0]) : null;
   }
 
   static async create(data: IGoal): Promise<IGoal> {
@@ -35,7 +44,7 @@ class GoalModel {
       'INSERT INTO goals (id, title, target, current, deadline, user) VALUES (?, ?, ?, ?, ?, ?)',
       [id, data.title, data.target, data.current, data.deadline, data.user]
     );
-    return { ...data, id };
+    return this.transformGoal({ ...data, id });
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<IGoal>): Promise<IGoal | null> {

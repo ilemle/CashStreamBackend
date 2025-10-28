@@ -20,6 +20,15 @@ export interface IOperation {
 }
 
 class OperationModel {
+  // Вспомогательная функция для преобразования DECIMAL строк в числа
+  private static transformOperation(operation: any): IOperation {
+    return {
+      ...operation,
+      amount: Number(operation.amount),
+      timestamp: operation.timestamp ? Number(operation.timestamp) : undefined,
+    };
+  }
+
   static async find(filter: any): Promise<IOperation[]> {
     let query = 'SELECT * FROM operations WHERE user = ?';
     const params: any[] = [filter.user];
@@ -39,7 +48,7 @@ class OperationModel {
     query += ' ORDER BY date DESC';
     
     const [rows] = await pool.execute(query, params);
-    return rows as IOperation[];
+    return (rows as any[]).map(this.transformOperation);
   }
 
   static async findById(id: string): Promise<IOperation | null> {
@@ -47,8 +56,8 @@ class OperationModel {
       'SELECT * FROM operations WHERE id = ?',
       [id]
     );
-    const ops = rows as IOperation[];
-    return ops[0] || null;
+    const ops = rows as any[];
+    return ops[0] ? this.transformOperation(ops[0]) : null;
   }
 
   static async create(data: IOperation): Promise<IOperation> {
@@ -57,7 +66,7 @@ class OperationModel {
       'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.user]
     );
-    return { ...data, id };
+    return this.transformOperation({ ...data, id });
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<IOperation>): Promise<IOperation | null> {

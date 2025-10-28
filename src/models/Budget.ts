@@ -12,12 +12,21 @@ export interface IBudget {
 }
 
 class BudgetModel {
+  // Вспомогательная функция для преобразования DECIMAL строк в числа
+  private static transformBudget(budget: any): IBudget {
+    return {
+      ...budget,
+      spent: Number(budget.spent),
+      budget: Number(budget.budget),
+    };
+  }
+
   static async find(filter: { user: string }): Promise<IBudget[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE user = ?',
       [filter.user]
     );
-    return rows as IBudget[];
+    return (rows as any[]).map(this.transformBudget);
   }
 
   static async findById(id: string): Promise<IBudget | null> {
@@ -25,8 +34,8 @@ class BudgetModel {
       'SELECT * FROM budgets WHERE id = ?',
       [id]
     );
-    const budgets = rows as IBudget[];
-    return budgets[0] || null;
+    const budgets = rows as any[];
+    return budgets[0] ? this.transformBudget(budgets[0]) : null;
   }
 
   static async create(data: IBudget): Promise<IBudget> {
@@ -35,7 +44,7 @@ class BudgetModel {
       'INSERT INTO budgets (id, category, spent, budget, color, user) VALUES (?, ?, ?, ?, ?, ?)',
       [id, data.category, data.spent, data.budget, data.color, data.user]
     );
-    return { ...data, id };
+    return this.transformBudget({ ...data, id });
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<IBudget>): Promise<IBudget | null> {

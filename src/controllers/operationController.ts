@@ -4,10 +4,43 @@ import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/re
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const ops = await Operation.find({ user: req.user?.id || '' });
+    const { startDate, endDate } = req.query;
+    
+    console.log('📅 Backend received dates:', { startDate, endDate, userId: req.user?.id, tzOffset: new Date().getTimezoneOffset() });
+    
+    // Логируем несколько первых операций для отладки
+    const debugOps = await Operation.find({ user: req.user?.id || '' });
+    console.log('📋 Sample operations dates:', debugOps.slice(0, 3).map((op: IOperation) => ({ date: op.date, id: op.id })));
+    
+    // Строим базовый запрос
+    const query: any = { user: req.user?.id || '' };
+    
+    // Добавляем фильтрацию по датам, если они переданы
+    if (startDate || endDate) {
+      query.date = {};
+      
+      if (startDate) {
+        // Парсим дату как UTC дату начала дня
+        const start = new Date(startDate + 'T00:00:00.000Z');
+        query.date.$gte = start;
+        console.log('📅 Start date (UTC):', start);
+      }
+      
+      if (endDate) {
+        // Парсим дату как UTC дату конца дня
+        const end = new Date(endDate + 'T23:59:59.999Z');
+        query.date.$lte = end;
+        console.log('📅 End date (UTC):', end);
+      }
+    }
+    
+    console.log('📋 MySQL query filter:', JSON.stringify(query, null, 2));
+    const ops = await Operation.find(query);
+    console.log('📋 Found operations:', ops.length);
     const opsWithConversion = await addCurrencyConversionToArray(ops, req);
     res.status(200).json({ success: true, count: ops.length, data: opsWithConversion });
   } catch (err: any) {
+    console.error('❌ Error fetching operations:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

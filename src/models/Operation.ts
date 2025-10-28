@@ -20,11 +20,25 @@ export interface IOperation {
 }
 
 class OperationModel {
-  static async find(filter: { user: string }): Promise<IOperation[]> {
-    const [rows] = await pool.execute(
-      'SELECT * FROM operations WHERE user = ? ORDER BY date DESC',
-      [filter.user]
-    );
+  static async find(filter: any): Promise<IOperation[]> {
+    let query = 'SELECT * FROM operations WHERE user = ?';
+    const params: any[] = [filter.user];
+    
+    // Добавляем фильтрацию по датам, если они переданы
+    if (filter.date) {
+      if (filter.date.$gte) {
+        query += ' AND date >= ?';
+        params.push(filter.date.$gte);
+      }
+      if (filter.date.$lte) {
+        query += ' AND date <= ?';
+        params.push(filter.date.$lte);
+      }
+    }
+    
+    query += ' ORDER BY date DESC';
+    
+    const [rows] = await pool.execute(query, params);
     return rows as IOperation[];
   }
 

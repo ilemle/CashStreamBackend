@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Operation, { IOperation } from '../models/Operation';
 import Budget from '../models/Budget';
+import Goal from '../models/Goal';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
 
 // Вспомогательная функция для обновления бюджета
@@ -42,6 +43,46 @@ async function updateBudgetSpent(userId: string, category: string, amount: numbe
     console.log(`✅ Budget updated successfully!`);
   } catch (error: any) {
     console.error('❌ Error updating budget:', error.message);
+  }
+}
+
+// Вспомогательная функция для автопополнения целей при получении дохода
+async function autoFillGoals(userId: string, incomeAmount: number) {
+  try {
+    console.log(`🎯 Checking auto-fill goals for user: ${userId}, income: ${incomeAmount}`);
+    
+    // Находим все цели с включенным автопополнением
+    const goals = await Goal.find({ user: userId });
+    const autoFillGoals = goals.filter(g => g.autoFill && g.autoFillPercentage && g.autoFillPercentage > 0);
+    
+    if (autoFillGoals.length === 0) {
+      console.log(`⚠️ No auto-fill goals found`);
+      return;
+    }
+    
+    console.log(`📋 Found ${autoFillGoals.length} auto-fill goals`);
+    
+    // Пополняем каждую цель
+    for (const goal of autoFillGoals) {
+      if (!goal.id) continue; // Пропускаем цели без ID
+      
+      const percentage = Number(goal.autoFillPercentage || 0);
+      const fillAmount = (incomeAmount * percentage) / 100;
+      const newCurrent = Number(goal.current) + fillAmount;
+      
+      // Не превышаем целевую сумму
+      const finalAmount = Math.min(newCurrent, Number(goal.target));
+      
+      console.log(`💰 Auto-filling goal "${goal.title}":`);
+      console.log(`  - Income: ${incomeAmount}, Percentage: ${percentage}%`);
+      console.log(`  - Fill amount: ${fillAmount}`);
+      console.log(`  - Current: ${goal.current} → ${finalAmount}`);
+      
+      await Goal.findByIdAndUpdate(goal.id, { current: finalAmount });
+      console.log(`✅ Goal auto-filled successfully!`);
+    }
+  } catch (error: any) {
+    console.error('❌ Error auto-filling goals:', error.message);
   }
 }
 
@@ -133,6 +174,11 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       await updateBudgetSpent(op.user, op.category, Math.abs(op.amount), 'add');
     }
     
+    // Автоматически пополняем цели при создании операции дохода
+    if (op.type === 'income' && op.user) {
+      await autoFillGoals(op.user, Math.abs(op.amount));
+    }
+    
     const opWithConversion = await addCurrencyConversion(op, req);
     res.status(201).json({ success: true, data: opWithConversion });
   } catch (err: any) {
@@ -169,12 +215,24 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
       await updateBudgetSpent(existingOp.user, oldCategory, oldAmount, 'subtract');
     }
     
+    // Откатываем автопополнение целей (если была доходом)
+    // Примечание: мы не можем точно откатить, так как процент мог измениться,
+    // поэтому просто логируем это
+    if (oldType === 'income' && existingOp.user && newType !== 'income') {
+      console.log(`⚠️ Operation type changed from income to ${newType}, goals were auto-filled and cannot be automatically reverted`);
+    }
+    
     // Обновляем операцию
     const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
     
     // Добавляем новую операцию в бюджет (если расход)
     if (newType === 'expense' && newCategory && existingOp.user) {
       await updateBudgetSpent(existingOp.user, newCategory, newAmount, 'add');
+    }
+    
+    // Автопополняем цели (если теперь доход и был не доходом)
+    if (newType === 'income' && oldType !== 'income' && existingOp.user) {
+      await autoFillGoals(existingOp.user, newAmount);
     }
     
     const opWithConversion = await addCurrencyConversion(op || existingOp, req);

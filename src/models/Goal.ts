@@ -8,6 +8,8 @@ export interface IGoal {
   current: number;
   deadline: string;
   user: string;
+  autoFill?: boolean;
+  autoFillPercentage?: number;
   createdAt?: Date;
 }
 
@@ -18,6 +20,8 @@ class GoalModel {
       ...goal,
       target: Number(goal.target),
       current: Number(goal.current),
+      autoFill: goal.autoFill === 1 || goal.autoFill === true,
+      autoFillPercentage: goal.autoFillPercentage ? Number(goal.autoFillPercentage) : undefined,
     };
   }
 
@@ -41,8 +45,8 @@ class GoalModel {
   static async create(data: IGoal): Promise<IGoal> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO goals (id, title, target, current, deadline, user) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.target, data.current, data.deadline, data.user]
+      'INSERT INTO goals (id, title, target, current, deadline, user, autoFill, autoFillPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.target, data.current, data.deadline, data.user, data.autoFill || false, data.autoFillPercentage || null]
     );
     return this.transformGoal({ ...data, id });
   }

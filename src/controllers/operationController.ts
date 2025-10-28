@@ -4,9 +4,9 @@ import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/re
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, timezoneOffset } = req.query;
     
-    console.log('📅 Backend received dates:', { startDate, endDate, userId: req.user?.id, tzOffset: new Date().getTimezoneOffset() });
+    console.log('📅 Backend received dates:', { startDate, endDate, timezoneOffset, userId: req.user?.id });
     
     // Логируем несколько первых операций для отладки
     const debugOps = await Operation.find({ user: req.user?.id || '' });
@@ -19,18 +19,26 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     if (startDate || endDate) {
       query.date = {};
       
+      // timezoneOffset приходит в минутах (например, -180 для UTC+3)
+      // Нужно вычесть это смещение, чтобы получить UTC время начала/конца локального дня
+      const offsetMinutes = timezoneOffset ? parseInt(String(timezoneOffset)) : 0;
+      
       if (startDate) {
-        // Парсим дату как UTC дату начала дня
+        // Парсим дату как UTC полночь, затем применяем offset
         const start = new Date(startDate + 'T00:00:00.000Z');
+        // Добавляем offset (для UTC+3 offset = -180, добавляем -180, т.е. вычитаем 3 часа)
+        // Это преобразует '28.10 00:00 UTC' → '27.10 21:00 UTC' (начало локального дня в UTC)
+        start.setMinutes(start.getMinutes() + offsetMinutes);
         query.date.$gte = start;
-        console.log('📅 Start date (UTC):', start);
+        console.log('📅 Start date (UTC adjusted for local TZ):', start);
       }
       
       if (endDate) {
-        // Парсим дату как UTC дату конца дня
+        // Парсим дату как UTC конец дня, затем применяем offset
         const end = new Date(endDate + 'T23:59:59.999Z');
+        end.setMinutes(end.getMinutes() + offsetMinutes);
         query.date.$lte = end;
-        console.log('📅 End date (UTC):', end);
+        console.log('📅 End date (UTC adjusted for local TZ):', end);
       }
     }
     

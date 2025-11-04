@@ -74,7 +74,7 @@ class OperationModel {
     const values: any[] = [];
 
     // Поля, которые нельзя обновлять (вычисляемые или системные)
-    const excludedFields = ['id', 'user', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode'];
+    const excludedFields = ['id', 'user', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType'];
 
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && !excludedFields.includes(key)) {
@@ -98,6 +98,51 @@ class OperationModel {
 
   static async findByIdAndDelete(id: string): Promise<void> {
     await pool.execute('DELETE FROM operations WHERE id = ?', [id]);
+  }
+
+  static async createMany(operations: IOperation[]): Promise<IOperation[]> {
+    if (operations.length === 0) {
+      return [];
+    }
+
+    // Используем транзакцию для атомарности
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const createdOperations: IOperation[] = [];
+
+      for (const data of operations) {
+        const id = uuidv4();
+        await connection.execute(
+          'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            id,
+            data.title,
+            data.titleKey || null,
+            data.amount,
+            data.category,
+            data.categoryKey || null,
+            data.date,
+            data.timestamp || null,
+            data.type,
+            data.fromAccount || null,
+            data.toAccount || null,
+            data.currency || 'RUB',
+            data.user
+          ]
+        );
+        createdOperations.push(this.transformOperation({ ...data, id }));
+      }
+
+      await connection.commit();
+      return createdOperations;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 }
 

@@ -288,3 +288,72 @@ export const getBalance = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const createOperationsBatch = async (req: Request, res: Response, _next: NextFunction) => {
+  try {
+    const { operations } = req.body;
+
+    // Валидация входных данных
+    if (!Array.isArray(operations) || operations.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Operations array is required and must not be empty'
+      });
+      return;
+    }
+
+    // Валидация каждой операции
+    for (const op of operations) {
+      if (!op.title || op.amount === undefined || !op.category || !op.date || !op.type) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid operation: missing required fields (title, amount, category, date, type)`
+        });
+        return;
+      }
+    }
+
+    console.log(`📦 Creating batch of ${operations.length} operations for user: ${req.user?.id}`);
+
+    // Подготавливаем данные для создания
+    const operationsData: IOperation[] = operations.map((op: any) => ({
+      title: op.title,
+      titleKey: op.titleKey || undefined,
+      amount: op.amount,
+      category: op.category,
+      categoryKey: op.categoryKey || undefined,
+      date: op.date,
+      timestamp: op.timestamp || undefined,
+      type: op.type,
+      fromAccount: op.fromAccount || undefined,
+      toAccount: op.toAccount || undefined,
+      currency: op.currency || 'RUB',
+      user: req.user?.id || ''
+    }));
+
+    // Создаем операции в транзакции
+    const createdOperations = await Operation.createMany(operationsData);
+
+    // Обновляем бюджеты и цели для каждой операции
+    for (const op of createdOperations) {
+      // Автоматически обновляем бюджет при создании операции расхода
+      if (op.type === 'expense' && op.category && op.user) {
+        await updateBudgetSpent(op.user, op.category, Math.abs(op.amount), 'add');
+      }
+      
+      // Автоматически пополняем цели при создании операции дохода
+      if (op.type === 'income' && op.user) {
+        await autoFillGoals(op.user, Math.abs(op.amount));
+      }
+    }
+
+    // Добавляем конвертацию валют к результатам
+    const opsWithConversion = await addCurrencyConversionToArray(createdOperations, req);
+
+    console.log(`✅ Successfully created ${createdOperations.length} operations`);
+    res.status(201).json({ success: true, data: opsWithConversion });
+  } catch (err: any) {
+    console.error('❌ Error creating batch operations:', err);
+    res.status(500).json({ success: false, message: err.message || 'Error creating operations' });
+  }
+};

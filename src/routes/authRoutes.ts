@@ -1,10 +1,13 @@
 import { Router } from 'express';
-import { register, login, getMe } from '../controllers/authController';
+import { sendVerificationCode, verifyEmailAndRegister, login, getMe } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/register', register);
+// Отправка кода подтверждения
+router.post('/register/send-code', sendVerificationCode);
+// Подтверждение email и завершение регистрации
+router.post('/register/verify', verifyEmailAndRegister);
 router.post('/login', login);
 router.get('/me', protect, getMe);
 

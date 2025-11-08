@@ -47,6 +47,7 @@ import goalRoutes from './routes/goalRoutes';
 import currencyRoutes from './routes/currencyRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import adminRoutes from './routes/adminRoutes';
+import aiRoutes from './routes/aiRoutes';
 // Currency conversion middleware для всех API роутов
 app.use('/api', currencyConverter);
 
@@ -57,6 +58,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Serve admin panel static files in production
 if (process.env.NODE_ENV === 'production') {

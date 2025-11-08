@@ -441,3 +441,123 @@ export const changePassword = async (req: Request, res: Response, _next: NextFun
   }
 };
 
+// Удаление аккаунта (требует подтверждения паролем)
+export const deleteAccount = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    const { password } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Not authorized'
+      });
+      return;
+    }
+
+    if (!password) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide password to confirm account deletion'
+      });
+      return;
+    }
+
+    // Получаем пользователя с паролем
+    if (!pool) {
+      res.status(500).json({
+        success: false,
+        message: 'Database connection not available'
+      });
+      return;
+    }
+
+    const [rows] = await pool.execute(
+      'SELECT * FROM users WHERE id = ?',
+      [userId]
+    );
+    const users = rows as IUser[];
+    const user = users[0];
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Проверяем пароль
+    const isMatch = await User.matchPassword(password, user.password);
+    if (!isMatch) {
+      res.status(400).json({
+        success: false,
+        message: 'Password is incorrect'
+      });
+      return;
+    }
+
+    // СНАЧАЛА удаляем все связанные данные (операции, бюджеты, цели, верификации)
+    // Это нужно сделать ДО удаления пользователя из-за внешних ключей
+    console.log('🗑️ Deleting user related data...');
+    try {
+      await pool.execute('DELETE FROM operations WHERE user = ?', [userId]);
+      console.log('✅ Operations deleted');
+      
+      await pool.execute('DELETE FROM budgets WHERE user = ?', [userId]);
+      console.log('✅ Budgets deleted');
+      
+      await pool.execute('DELETE FROM goals WHERE user = ?', [userId]);
+      console.log('✅ Goals deleted');
+      
+      await pool.execute('DELETE FROM email_verifications WHERE email = ?', [user.email]);
+      console.log('✅ Email verifications deleted');
+      
+      // Также удаляем категории пользователя, если таблица существует
+      try {
+        await pool.execute('DELETE FROM categories WHERE userId = ?', [userId]);
+        console.log('✅ User categories deleted');
+      } catch (categoryError: any) {
+        // Игнорируем ошибку, если таблица не существует
+        if (categoryError.code !== 'ER_NO_SUCH_TABLE') {
+          console.warn('⚠️ Could not delete user categories:', categoryError.message);
+        } else {
+          console.log('ℹ️ Categories table does not exist, skipping');
+        }
+      }
+    } catch (cleanupError: any) {
+      console.error('❌ Error cleaning up user data:', cleanupError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete user data: ' + cleanupError.message
+      });
+      return;
+    }
+
+    // ТЕПЕРЬ удаляем пользователя (после удаления всех связанных данных)
+    console.log('🗑️ Deleting user account...');
+    const deleted = await User.delete(userId);
+    
+    if (!deleted) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete account'
+      });
+      return;
+    }
+    
+    console.log('✅ User account deleted successfully');
+
+    res.status(200).json({
+      success: true,
+      message: 'Account has been deleted successfully'
+    });
+  } catch (err: any) {
+    console.error('Delete account error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to delete account'
+    });
+  }
+};
+

@@ -59,6 +59,16 @@ class UserModel {
     const updateResult = result as any;
     return updateResult.affectedRows > 0;
   }
+
+  static async delete(id: string): Promise<boolean> {
+    const [result] = await pool.execute(
+      'DELETE FROM users WHERE id = ?',
+      [id]
+    );
+    
+    const deleteResult = result as any;
+    return deleteResult.affectedRows > 0;
+  }
 }
 
 export default UserModel;

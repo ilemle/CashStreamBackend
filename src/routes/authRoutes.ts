@@ -6,7 +6,8 @@ import {
   getMe,
   requestPasswordReset,
   resetPassword,
-  changePassword
+  changePassword,
+  deleteAccount
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 
@@ -25,6 +26,9 @@ router.post('/password/reset', resetPassword);
 
 // Изменение пароля (требует авторизации)
 router.post('/password/change', protect, changePassword);
+
+// Удаление аккаунта (требует авторизации)
+router.delete('/account', protect, deleteAccount);
 
 // Получение информации о текущем пользователе
 router.get('/me', protect, getMe);

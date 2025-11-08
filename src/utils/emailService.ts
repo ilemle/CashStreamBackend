@@ -18,17 +18,58 @@ const createTransporter = async (): Promise<nodemailer.Transporter> => {
 
   // Создаем новый транспортер
   transporterPromise = (async () => {
-    // Для продакшена используем реальный SMTP
-    if (process.env.NODE_ENV === 'production' && process.env.SMTP_HOST) {
+    // Используем реальный SMTP, если настроен (работает и в dev, и в production)
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const port = parseInt(process.env.SMTP_PORT || '587');
+      const secure = process.env.SMTP_SECURE === 'true';
+      
+      console.log('📧 Using real SMTP server:', process.env.SMTP_HOST, `(port: ${port}, secure: ${secure})`);
+      
+      // Специальная конфигурация для Yandex
+      const isYandex = process.env.SMTP_HOST?.includes('yandex');
+      
       cachedTransporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
+        port: port,
+        secure: secure, // true для 465, false для других портов
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
+        tls: {
+          // Не проверяем сертификат (для разработки)
+          rejectUnauthorized: false
+        },
+        // Для порта 587 используем requireTLS (STARTTLS)
+        requireTLS: !secure,
+        connectionTimeout: 60000, // 60 секунд для VPN соединений
+        greetingTimeout: 60000,
+        socketTimeout: 60000,
+        debug: process.env.NODE_ENV === 'development', // Включаем debug в режиме разработки
       });
+      
+      // Детальное логирование для отладки
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📧 SMTP Config:', {
+          host: process.env.SMTP_HOST,
+          port: port,
+          secure: secure,
+          requireTLS: !secure && port === 587,
+          user: process.env.SMTP_USER,
+          passLength: process.env.SMTP_PASS?.length || 0,
+          isYandex: isYandex
+        });
+      }
+      
+      // Проверяем подключение
+      try {
+        await cachedTransporter.verify();
+        console.log('✅ SMTP connection verified successfully');
+      } catch (verifyError: any) {
+        console.error('❌ SMTP verification failed:', verifyError.message);
+        // Не бросаем ошибку, продолжаем - возможно, письмо все равно отправится
+      }
+      
       return cachedTransporter;
     }
 

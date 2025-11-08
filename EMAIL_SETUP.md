@@ -56,7 +56,59 @@ yarn dev
 
 ---
 
-### Вариант 2: SendGrid (рекомендуется для продакшена)
+### Вариант 2: AWS SES (лучший для продакшена)
+
+AWS SES (Simple Email Service) - самый экономичный и масштабируемый вариант для продакшена.
+
+#### Шаг 1: Настройка AWS SES
+
+1. Зарегистрируйтесь на [AWS](https://aws.amazon.com/)
+2. Перейдите в сервис **SES** (Simple Email Service)
+3. Выберите регион (например, `us-east-1` или `eu-west-1`)
+4. Верифицируйте email или домен:
+   - Для тестирования: **Verify a New Email Address**
+   - Для продакшена: **Verify a New Domain** (рекомендуется)
+5. После верификации запросите выход из sandbox (если нужно отправлять на любые адреса)
+
+#### Шаг 2: Создание SMTP credentials
+
+1. В SES перейдите в **SMTP Settings**
+2. Нажмите **Create SMTP Credentials**
+3. Введите имя (например: `CashStream`)
+4. **Скопируйте SMTP username и password** (показываются только один раз!)
+
+#### Шаг 3: Настройка переменных окружения
+
+```env
+NODE_ENV=production
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-username
+SMTP_PASS=your-smtp-password
+SMTP_FROM=noreply@yourdomain.com
+FRONTEND_URL=https://your-app-url.com
+```
+
+**Важно:**
+- `SMTP_HOST` зависит от региона AWS (например: `email-smtp.us-east-1.amazonaws.com`)
+- `SMTP_USER` и `SMTP_PASS` - это SMTP credentials из AWS SES
+- `SMTP_FROM` - должен быть верифицированный email или домен
+
+**Регионы и SMTP endpoints:**
+- `us-east-1`: `email-smtp.us-east-1.amazonaws.com`
+- `us-west-2`: `email-smtp.us-west-2.amazonaws.com`
+- `eu-west-1`: `email-smtp.eu-west-1.amazonaws.com`
+- `ap-southeast-1`: `email-smtp.ap-southeast-1.amazonaws.com`
+
+**Цены:**
+- Первые 62,000 писем/месяц бесплатно (если запущено на EC2)
+- После: $0.10 за 1000 писем
+- Очень дешево для больших объемов!
+
+---
+
+### Вариант 3: SendGrid (простой для старта)
 
 SendGrid - профессиональный сервис для отправки транзакционных email с хорошей доставляемостью.
 
@@ -97,7 +149,7 @@ FRONTEND_URL=https://your-app-url.com
 
 ---
 
-### Вариант 3: Mailgun
+### Вариант 4: Mailgun
 
 Mailgun - еще один популярный сервис для отправки email.
 
@@ -124,7 +176,39 @@ FRONTEND_URL=https://your-app-url.com
 
 ---
 
-### Вариант 4: Собственный SMTP сервер
+### Вариант 5: Yandex SMTP (для России/СНГ)
+
+Yandex - хороший вариант для проектов с аудиторией в России и СНГ.
+
+#### Шаг 1: Настройка Yandex
+
+1. Зарегистрируйтесь на [Yandex](https://yandex.ru/)
+2. Перейдите в **Настройки** → **Пароли и авторизация**
+3. Включите **Пароли приложений**
+4. Создайте пароль приложения для "Почта"
+5. **Скопируйте пароль приложения**
+
+#### Шаг 2: Настройка переменных окружения
+
+```env
+NODE_ENV=production
+SMTP_HOST=smtp.yandex.ru
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your-email@yandex.ru
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@yandex.ru
+FRONTEND_URL=https://your-app-url.com
+```
+
+**Важно:**
+- Используйте пароль приложения, а не основной пароль
+- Порт 465 с `SMTP_SECURE=true` для SSL
+- Лимит: до 500 писем в день
+
+---
+
+### Вариант 6: Собственный SMTP сервер
 
 Если у вас есть собственный SMTP сервер (например, на хостинге):
 

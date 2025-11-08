@@ -16,13 +16,19 @@ export const currencyConverter = (
   _res: Response,
   next: NextFunction
 ): void => {
-  // Читаем кастомный заголовок
-  const secondaryCurrency = req.headers['x-secondary-currency'] as string;
+  try {
+    // Читаем кастомный заголовок
+    const secondaryCurrency = req.headers['x-secondary-currency'] as string;
 
-  if (secondaryCurrency && isValidCurrency(secondaryCurrency)) {
-    req.secondaryCurrency = secondaryCurrency.toUpperCase();
+    if (secondaryCurrency && isValidCurrency(secondaryCurrency)) {
+      req.secondaryCurrency = secondaryCurrency.toUpperCase();
+    }
+
+    next();
+  } catch (error) {
+    // Если произошла ошибка в middleware, передаем её дальше
+    console.error('Error in currencyConverter middleware:', error);
+    next(error);
   }
-
-  next();
 };
 

@@ -30,6 +30,10 @@ class OperationModel {
   }
 
   static async find(filter: any): Promise<IOperation[]> {
+    if (!pool) {
+      throw new Error('Database pool is not initialized');
+    }
+
     let query = 'SELECT * FROM operations WHERE user = ?';
     const params: any[] = [filter.user];
     

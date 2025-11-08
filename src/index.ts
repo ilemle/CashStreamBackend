@@ -45,7 +45,6 @@ import budgetRoutes from './routes/budgetRoutes';
 import goalRoutes from './routes/goalRoutes';
 import currencyRoutes from './routes/currencyRoutes';
 import categoryRoutes from './routes/categoryRoutes';
-
 // Currency conversion middleware для всех API роутов
 app.use('/api', currencyConverter);
 

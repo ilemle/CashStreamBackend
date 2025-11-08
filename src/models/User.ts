@@ -46,6 +46,19 @@ class UserModel {
   static async matchPassword(enteredPassword: string, hashedPassword: string): Promise<boolean> {
     return await bcrypt.compare(enteredPassword, hashedPassword);
   }
+
+  static async updatePassword(id: string, newPassword: string): Promise<boolean> {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    const [result] = await pool.execute(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, id]
+    );
+    
+    const updateResult = result as any;
+    return updateResult.affectedRows > 0;
+  }
 }
 
 export default UserModel;

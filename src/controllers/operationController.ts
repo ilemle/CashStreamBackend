@@ -92,10 +92,6 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     
     console.log('📅 Backend received dates:', { startDate, endDate, timezoneOffset, userId: req.user?.id });
     
-    // Логируем несколько первых операций для отладки
-    const debugOps = await Operation.find({ user: req.user?.id || '' });
-    console.log('📋 Sample operations dates:', debugOps.slice(0, 3).map((op: IOperation) => ({ date: op.date, id: op.id })));
-    
     // Строим базовый запрос
     const query: any = { user: req.user?.id || '' };
     
@@ -127,13 +123,24 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     }
     
     console.log('📋 MySQL query filter:', JSON.stringify(query, null, 2));
+    console.log('⏱️ Starting database query...');
+    const startTime = Date.now();
+    
     const ops = await Operation.find(query);
-    console.log('📋 Found operations:', ops.length);
+    const queryTime = Date.now() - startTime;
+    console.log(`✅ Database query completed in ${queryTime}ms, found ${ops.length} operations`);
+    
+    console.log('💱 Starting currency conversion...');
+    const conversionStartTime = Date.now();
     const opsWithConversion = await addCurrencyConversionToArray(ops, req);
+    const conversionTime = Date.now() - conversionStartTime;
+    console.log(`✅ Currency conversion completed in ${conversionTime}ms`);
+    
     res.status(200).json({ success: true, count: ops.length, data: opsWithConversion });
   } catch (err: any) {
     console.error('❌ Error fetching operations:', err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error('❌ Error stack:', err.stack);
+    res.status(500).json({ success: false, message: err.message || 'Failed to fetch operations' });
   }
 };
 

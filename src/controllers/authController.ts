@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import User, { IUser } from '../models/User';
 import EmailVerification from '../models/EmailVerification';
-import { sendVerificationEmail } from '../utils/emailService';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailService';
+import { pool } from '../config/database';
 import jwt from 'jsonwebtoken';
 
 const generateToken = (id: string): string => {
@@ -208,6 +209,235 @@ export const getMe = async (req: Request, res: Response, _next: NextFunction): P
     res.status(200).json({ success: true, data: user });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message || 'Failed to get user' });
+  }
+};
+
+// Запрос на восстановление пароля
+export const requestPasswordReset = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    console.log('📨 Received password reset request');
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide email'
+      });
+      return;
+    }
+
+    // Проверяем, существует ли пользователь
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Для безопасности не сообщаем, что пользователь не найден
+      res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset code has been sent'
+      });
+      return;
+    }
+
+    // Генерируем код подтверждения
+    const code = generateVerificationCode();
+    console.log('🔐 Generated password reset code:', code);
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // Код действителен 10 минут
+
+    // Сохраняем код в таблицу верификации
+    console.log('💾 Saving password reset code to database...');
+    await EmailVerification.create({
+      email,
+      code,
+      expiresAt,
+      verified: false
+    });
+    console.log('✅ Password reset code saved');
+
+    // Отправляем email с кодом (не блокируем ответ)
+    console.log('📧 Attempting to send password reset email...');
+    sendPasswordResetEmail(email, code, user.name)
+      .then(() => {
+        console.log('✅ Password reset email sent successfully');
+      })
+      .catch((emailError: any) => {
+        console.error('❌ Password reset email sending error (non-blocking):', emailError);
+      });
+
+    // Отвечаем сразу
+    console.log('✅ Sending response to client');
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset code has been sent',
+      data: {
+        email,
+        // В продакшене не отправляем код в ответе, только для тестирования
+        ...(process.env.NODE_ENV === 'development' && { code })
+      }
+    });
+    console.log('✅ Response sent');
+  } catch (err: any) {
+    console.error('❌ Request password reset error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to send password reset code'
+    });
+  }
+};
+
+// Подтверждение кода и сброс пароля
+export const resetPassword = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide email, code and new password'
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+      return;
+    }
+
+    // Проверяем код подтверждения
+    const verification = await EmailVerification.findOne({ email, code });
+
+    if (!verification) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+      return;
+    }
+
+    if (verification.verified) {
+      res.status(400).json({
+        success: false,
+        message: 'This code has already been used'
+      });
+      return;
+    }
+
+    if (new Date(verification.expiresAt) < new Date()) {
+      res.status(400).json({
+        success: false,
+        message: 'Verification code has expired'
+      });
+      return;
+    }
+
+    // Проверяем, существует ли пользователь
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Обновляем пароль
+    await User.updatePassword(user.id!, newPassword);
+    
+    // Отмечаем код как использованный
+    await EmailVerification.markAsVerified(email, code);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (err: any) {
+    console.error('Reset password error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to reset password'
+    });
+  }
+};
+
+// Изменение пароля (для авторизованных пользователей)
+export const changePassword = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Not authorized'
+      });
+      return;
+    }
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide current password and new password'
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+      return;
+    }
+
+    // Получаем пользователя с паролем
+    if (!pool) {
+      res.status(500).json({
+        success: false,
+        message: 'Database connection not available'
+      });
+      return;
+    }
+
+    const [rows] = await pool.execute(
+      'SELECT * FROM users WHERE id = ?',
+      [userId]
+    );
+    const users = rows as IUser[];
+    const user = users[0];
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Проверяем текущий пароль
+    const isMatch = await User.matchPassword(currentPassword, user.password);
+    if (!isMatch) {
+      res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+      return;
+    }
+
+    // Обновляем пароль
+    await User.updatePassword(userId, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been changed successfully'
+    });
+  } catch (err: any) {
+    console.error('Change password error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to change password'
+    });
   }
 };
 

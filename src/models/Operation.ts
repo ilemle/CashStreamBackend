@@ -49,10 +49,44 @@ class OperationModel {
       }
     }
     
-    query += ' ORDER BY date DESC';
+    query += ' ORDER BY date DESC, timestamp DESC';
+    
+    // Добавляем пагинацию, если указана
+    // MySQL2 не всегда корректно работает с параметрами для LIMIT/OFFSET,
+    // поэтому используем числа напрямую (они уже валидированы через parseInt)
+    if (filter.skip !== undefined && filter.limit !== undefined) {
+      const limitNum = parseInt(String(filter.limit), 10);
+      const skipNum = parseInt(String(filter.skip), 10);
+      // Используем числа напрямую, так как они уже валидированы
+      query += ` LIMIT ${limitNum} OFFSET ${skipNum}`;
+    }
     
     const [rows] = await pool.execute(query, params);
     return (rows as any[]).map(this.transformOperation);
+  }
+
+  static async countDocuments(filter: any): Promise<number> {
+    if (!pool) {
+      throw new Error('Database pool is not initialized');
+    }
+
+    let query = 'SELECT COUNT(*) as count FROM operations WHERE user = ?';
+    const params: any[] = [filter.user];
+    
+    // Добавляем фильтрацию по датам, если они переданы
+    if (filter.date) {
+      if (filter.date.$gte) {
+        query += ' AND date >= ?';
+        params.push(filter.date.$gte);
+      }
+      if (filter.date.$lte) {
+        query += ' AND date <= ?';
+        params.push(filter.date.$lte);
+      }
+    }
+    
+    const [rows] = await pool.execute(query, params);
+    return (rows as any[])[0]?.count || 0;
   }
 
   static async findById(id: string): Promise<IOperation | null> {

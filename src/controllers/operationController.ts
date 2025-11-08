@@ -87,13 +87,37 @@ async function autoFillGoals(userId: string, incomeAmount: number) {
 }
 
 export const getOperations = async (req: Request, res: Response, _next: NextFunction) => {
+  const requestStartTime = Date.now();
   try {
-    const { startDate, endDate, timezoneOffset } = req.query;
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📥 [GET OPERATIONS] Запрос на получение операций');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    console.log('📅 Backend received dates:', { startDate, endDate, timezoneOffset, userId: req.user?.id });
+    const { startDate, endDate, timezoneOffset, page, limit } = req.query;
+    const userId = req.user?.id;
+    
+    console.log('📋 Входные параметры:', {
+      startDate: startDate || 'не указано',
+      endDate: endDate || 'не указано',
+      timezoneOffset: timezoneOffset || 'не указано',
+      page: page || 'не указано',
+      limit: limit || 'не указано',
+      userId: userId || 'не указано'
+    });
+    
+    // Параметры пагинации
+    const pageNum = page ? parseInt(String(page), 10) : 1;
+    const limitNum = limit ? parseInt(String(limit), 10) : 50; // По умолчанию 50 операций
+    const skip = (pageNum - 1) * limitNum;
+    
+    console.log('📄 Параметры пагинации:', {
+      page: pageNum,
+      limit: limitNum,
+      skip: skip
+    });
     
     // Строим базовый запрос
-    const query: any = { user: req.user?.id || '' };
+    const query: any = { user: userId || '' };
     
     // Добавляем фильтрацию по датам, если они переданы
     if (startDate || endDate) {
@@ -102,6 +126,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
       // timezoneOffset приходит в минутах (например, -180 для UTC+3)
       // Нужно вычесть это смещение, чтобы получить UTC время начала/конца локального дня
       const offsetMinutes = timezoneOffset ? parseInt(String(timezoneOffset)) : 0;
+      console.log('🌍 Часовой пояс (offset в минутах):', offsetMinutes);
       
       if (startDate) {
         // Парсим дату как UTC полночь, затем применяем offset
@@ -110,7 +135,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
         // Это преобразует '28.10 00:00 UTC' → '27.10 21:00 UTC' (начало локального дня в UTC)
         start.setMinutes(start.getMinutes() + offsetMinutes);
         query.date.$gte = start;
-        console.log('📅 Start date (UTC adjusted for local TZ):', start);
+        console.log('📅 Начальная дата (UTC с учетом TZ):', start.toISOString());
       }
       
       if (endDate) {
@@ -118,29 +143,101 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
         const end = new Date(endDate + 'T23:59:59.999Z');
         end.setMinutes(end.getMinutes() + offsetMinutes);
         query.date.$lte = end;
-        console.log('📅 End date (UTC adjusted for local TZ):', end);
+        console.log('📅 Конечная дата (UTC с учетом TZ):', end.toISOString());
       }
     }
     
-    console.log('📋 MySQL query filter:', JSON.stringify(query, null, 2));
-    console.log('⏱️ Starting database query...');
-    const startTime = Date.now();
+    console.log('🔍 Финальный query объект:', JSON.stringify(query, null, 2));
+    console.log('⏱️ Начинаем запросы к базе данных...');
     
-    const ops = await Operation.find(query);
-    const queryTime = Date.now() - startTime;
-    console.log(`✅ Database query completed in ${queryTime}ms, found ${ops.length} operations`);
+    const dbStartTime = Date.now();
     
-    console.log('💱 Starting currency conversion...');
+    // Получаем общее количество операций для пагинации
+    console.log('📊 Запрос COUNT для подсчета общего количества...');
+    const countStartTime = Date.now();
+    const total = await Operation.countDocuments(query);
+    const countTime = Date.now() - countStartTime;
+    console.log(`✅ COUNT запрос выполнен за ${countTime}ms, всего операций: ${total}`);
+    
+    // Добавляем параметры пагинации в query для модели
+    const queryWithPagination = {
+      ...query,
+      skip,
+      limit: limitNum
+    };
+    
+    console.log('📋 Запрос SELECT с пагинацией:', {
+      skip: queryWithPagination.skip,
+      limit: queryWithPagination.limit
+    });
+    
+    // Получаем операции с пагинацией, сортировка по дате (новые сначала)
+    const selectStartTime = Date.now();
+    const ops = await Operation.find(queryWithPagination);
+    const selectTime = Date.now() - selectStartTime;
+    
+    const dbTime = Date.now() - dbStartTime;
+    console.log(`✅ SELECT запрос выполнен за ${selectTime}ms, получено операций: ${ops.length}`);
+    console.log(`⏱️ Общее время работы с БД: ${dbTime}ms`);
+    
+    if (ops.length > 0) {
+      console.log('📝 Примеры операций:');
+      ops.slice(0, 3).forEach((op, idx) => {
+        console.log(`  ${idx + 1}. ${op.title} - ${op.amount} ${op.currency || 'RUB'} (${op.type}) - ${op.date}`);
+      });
+      if (ops.length > 3) {
+        console.log(`  ... и еще ${ops.length - 3} операций`);
+      }
+    } else {
+      console.log('⚠️ Операции не найдены');
+    }
+    
+    console.log('💱 Начинаем конвертацию валют...');
     const conversionStartTime = Date.now();
     const opsWithConversion = await addCurrencyConversionToArray(ops, req);
     const conversionTime = Date.now() - conversionStartTime;
-    console.log(`✅ Currency conversion completed in ${conversionTime}ms`);
+    console.log(`✅ Конвертация валют завершена за ${conversionTime}ms`);
     
-    res.status(200).json({ success: true, count: ops.length, data: opsWithConversion });
+    // Вычисляем метаданные пагинации
+    const totalPages = Math.ceil(total / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+    
+    const totalTime = Date.now() - requestStartTime;
+    console.log('📊 Метаданные пагинации:', {
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+      hasNextPage,
+      hasPrevPage
+    });
+    console.log(`⏱️ Общее время обработки запроса: ${totalTime}ms`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [GET OPERATIONS] Запрос успешно обработан');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    
+    return res.status(200).json({ 
+      success: true, 
+      count: ops.length,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
+      data: opsWithConversion 
+    });
   } catch (err: any) {
-    console.error('❌ Error fetching operations:', err);
-    console.error('❌ Error stack:', err.stack);
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch operations' });
+    const totalTime = Date.now() - requestStartTime;
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [GET OPERATIONS] Ошибка при обработке запроса');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', err.message);
+    console.error('❌ Stack:', err.stack);
+    console.error(`⏱️ Время до ошибки: ${totalTime}ms`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    return res.status(500).json({ success: false, message: err.message || 'Failed to fetch operations' });
   }
 };
 

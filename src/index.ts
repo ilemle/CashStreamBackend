@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import connectDB from './config/database';
 
@@ -45,6 +46,7 @@ import budgetRoutes from './routes/budgetRoutes';
 import goalRoutes from './routes/goalRoutes';
 import currencyRoutes from './routes/currencyRoutes';
 import categoryRoutes from './routes/categoryRoutes';
+import adminRoutes from './routes/adminRoutes';
 // Currency conversion middleware для всех API роутов
 app.use('/api', currencyConverter);
 
@@ -54,14 +56,37 @@ app.use('/api/operations', operationRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/admin', adminRoutes);
 
-// 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
+// Serve admin panel static files in production
+if (process.env.NODE_ENV === 'production') {
+  const adminPath = path.join(__dirname, '../dist/admin');
+  app.use(express.static(adminPath));
+  
+  // Serve admin panel for all non-API routes (SPA routing)
+  // This must be before error handler but after API routes
+  app.get('*', (req: Request, res: Response, next) => {
+    // Don't serve admin for API routes
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Route not found'
+      });
+    }
+    // Serve index.html for all other routes (SPA routing)
+    return res.sendFile(path.join(adminPath, 'index.html'), (err) => {
+      if (err) next(err);
+    });
   });
-});
+} else {
+  // 404 handler for development (admin runs on separate port)
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      message: 'Route not found'
+    });
+  });
+}
 
 // Error handler (must be last)
 import errorHandler from './middleware/errorHandler';

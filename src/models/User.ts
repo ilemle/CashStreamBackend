@@ -69,6 +69,35 @@ class UserModel {
     const deleteResult = result as any;
     return deleteResult.affectedRows > 0;
   }
+
+  static async findAll(page: number = 1, limit: number = 10): Promise<{ users: IUser[]; total: number; page: number; limit: number; totalPages: number }> {
+    // Гарантируем, что значения - целые числа
+    const validPage = Math.max(1, Math.floor(page));
+    const validLimit = Math.max(1, Math.min(Math.floor(limit), 100));
+    const offset = (validPage - 1) * validLimit;
+    
+    // Получаем общее количество пользователей
+    const [countRows] = await pool.execute('SELECT COUNT(*) as total FROM users');
+    const total = (countRows as any[])[0].total;
+    
+    // Получаем пользователей с пагинацией
+    // MySQL2 не поддерживает параметры для LIMIT и OFFSET в prepared statements,
+    // поэтому используем числа напрямую (значения уже валидированы и безопасны)
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
+    );
+    
+    const users = rows as IUser[];
+    const totalPages = Math.ceil(total / validLimit);
+    
+    return {
+      users,
+      total,
+      page: validPage,
+      limit: validLimit,
+      totalPages
+    };
+  }
 }
 
 export default UserModel;

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import { pool } from '../config/database';
 
-// Получение списка всех пользователей
+// Получение списка всех пользователей с пагинацией
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     console.log('📋 [Admin] Getting all users...');
@@ -19,11 +19,19 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       return;
     }
     
-    const users = await User.findAll();
-    console.log(`✅ [Admin] Found ${users.length} users`);
+    // Получаем параметры пагинации из query
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Валидация параметров
+    const validPage = Math.max(1, page);
+    const validLimit = Math.min(Math.max(1, limit), 100); // Максимум 100 на странице
+    
+    const result = await User.findAll(validPage, validLimit);
+    console.log(`✅ [Admin] Found ${result.total} users (page ${result.page}, limit ${result.limit})`);
     
     // Преобразуем даты в строки для JSON
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = result.users.map(user => ({
       id: user.id,
       name: user.name,
       email: user.email,
@@ -40,7 +48,12 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       res.status(200).json({
         success: true,
         data: formattedUsers,
-        count: formattedUsers.length
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages
+        }
       });
     }
   } catch (err: any) {

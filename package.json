@@ -4,12 +4,17 @@
   "description": "Backend API for CashStream",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd admin && yarn build",
+    "build:backend": "tsc",
+    "build:admin": "cd admin && yarn build",
     "start": "node dist/index.js",
     "predev": "node scripts/clean-dev.js",
     "dev": "nodemon",
+    "dev:admin": "cd admin && yarn dev",
+    "dev:all": "concurrently \"yarn dev\" \"yarn dev:admin\"",
     "type-check": "tsc --noEmit",
-    "dev:clean": "pkill -f 'node.*3000' || true; sleep 2; yarn dev"
+    "dev:clean": "pkill -f 'node.*3000' || true; sleep 2; yarn dev",
+    "install:all": "yarn install && cd admin && yarn install"
   },
   "keywords": [
     "express",
@@ -38,6 +43,7 @@
     "@types/node": "^24.9.1",
     "@types/nodemailer": "^7.0.3",
     "@types/uuid": "^11.0.0",
+    "concurrently": "^8.2.2",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

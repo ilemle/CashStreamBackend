@@ -45,7 +45,7 @@ router.get('/me', protect, getMe);
 // Telegram авторизация
 router.get('/telegram/bot-url', getTelegramBotUrl);
 router.post('/telegram/login', loginWithTelegram);
-router.get('/telegram/check', checkTelegramAuth);
+router.post('/telegram/check', checkTelegramAuth);
 
 export default router;
 

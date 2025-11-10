@@ -6,7 +6,9 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailSer
 import { sendVerificationSMS, normalizePhoneNumber, validatePhoneNumber } from '../utils/smsService';
 import { pool } from '../config/database';
 import jwt from 'jsonwebtoken';
-import { getBotUrl, getBotAppUrl, getTelegramUserInfo } from '../services/telegramService';
+import { getBotUrl, getTelegramUserInfo, getBotUsername } from '../services/telegramService';
+import TelegramAuthSession from '../models/TelegramAuthSession';
+import { v4 as uuidv4 } from 'uuid';
 
 const generateToken = (id: string): string => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'default-secret', {
@@ -965,13 +967,13 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
   }
 };
 
-// Получение URL Telegram бота для авторизации
+// Получение URL Telegram бота для авторизации (с генерацией токена сессии)
 export const getTelegramBotUrl = async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
     const botUrl = await getBotUrl();
-    const botAppUrl = await getBotAppUrl();
+    const username = await getBotUsername();
     
-    if (!botUrl || !botAppUrl) {
+    if (!botUrl || !username) {
       res.status(503).json({
         success: false,
         message: 'Telegram bot is not available'
@@ -979,11 +981,26 @@ export const getTelegramBotUrl = async (_req: Request, res: Response, _next: Nex
       return;
     }
     
+    // Генерируем уникальный токен сессии
+    const sessionToken = uuidv4();
+    
+    // Создаем сессию (действительна 10 минут)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
+    await TelegramAuthSession.create({
+      sessionToken,
+      telegramId: 0, // Будет обновлено ботом при нажатии кнопки
+      expiresAt
+    });
+    
+    // URL с токеном сессии
+    const botAppUrl = `tg://resolve?domain=${username}&start=auth_${sessionToken}`;
+    
     res.status(200).json({
       success: true,
       data: {
         botUrl, // Для веб-версии
-        botAppUrl // Для мобильного приложения (tg://)
+        botAppUrl, // Для мобильного приложения (tg://)
+        sessionToken // Токен для проверки авторизации
       }
     });
   } catch (err: any) {
@@ -995,34 +1012,56 @@ export const getTelegramBotUrl = async (_req: Request, res: Response, _next: Nex
   }
 };
 
-// Проверка и авторизация через Telegram (для пользователей, которые нажали /start)
-export const checkTelegramAuth = async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
+// Проверка и авторизация через Telegram по токену сессии
+export const checkTelegramAuth = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
-    // Ищем пользователей, которые взаимодействовали с Telegram ботом за последние 5 минут
-    // Проверяем по времени последней активности в Telegram
-    const [rows] = await pool.execute(
-      `SELECT id, name, telegramId, createdAt, lastTelegramActivity
-       FROM users 
-       WHERE telegramId IS NOT NULL 
-       AND (
-         lastTelegramActivity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-         OR (lastTelegramActivity IS NULL AND createdAt > DATE_SUB(NOW(), INTERVAL 5 MINUTE))
-       )
-       ORDER BY COALESCE(lastTelegramActivity, createdAt) DESC 
-       LIMIT 1`
-    );
+    const { sessionToken } = req.body;
     
-    const recentUsers = rows as IUser[];
-    
-    if (recentUsers.length === 0) {
-      res.status(404).json({
+    if (!sessionToken) {
+      res.status(400).json({
         success: false,
-        message: 'No recent Telegram authentication found. Please press /start in the bot first.'
+        message: 'Session token is required'
       });
       return;
     }
     
-    const user = recentUsers[0];
+    // Ищем сессию по токену
+    const session = await TelegramAuthSession.findByToken(sessionToken);
+    
+    if (!session) {
+      res.status(404).json({
+        success: false,
+        message: 'Session not found or expired. Please try again.'
+      });
+      return;
+    }
+    
+    if (session.used) {
+      res.status(400).json({
+        success: false,
+        message: 'Session already used. Please start a new authorization.'
+      });
+      return;
+    }
+    
+    if (!session.userId) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found in session. Please press the button in the bot first.'
+      });
+      return;
+    }
+    
+    // Получаем пользователя
+    const user = await User.findById(session.userId);
+    
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
     
     // Получаем информацию о пользователе из Telegram
     const { getTelegramUserInfo } = await import('../services/telegramService');
@@ -1045,6 +1084,9 @@ export const checkTelegramAuth = async (_req: Request, res: Response, _next: Nex
     
     // Генерируем токен
     const token = generateToken(user.id!);
+    
+    // Отмечаем сессию как использованную
+    await TelegramAuthSession.markAsUsed(sessionToken);
     
     res.status(200).json({
       success: true,

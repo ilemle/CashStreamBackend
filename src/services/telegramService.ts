@@ -30,21 +30,46 @@ export const initializeTelegramBot = (): TelegramBot | null => {
       const firstName = msg.from?.first_name || 'Пользователь';
       const lastName = msg.from?.last_name || '';
       const username = msg.from?.username || '';
-      const startParam = match?.[1]; // Параметр после /start (например, "auth")
+      const startParam = match?.[1]; // Параметр после /start (например, "auth" или "auth_TOKEN")
       
       console.log(`📱 Получена команда /start от пользователя ${firstName} (ID: ${chatId}, Telegram ID: ${telegramId}, параметр: ${startParam || 'нет'})`);
       
       if (telegramId) {
         try {
           const User = (await import('../models/User')).default;
+          const TelegramAuthSession = (await import('../models/TelegramAuthSession')).default;
           
           // Проверяем, существует ли пользователь
           const existingUser = await User.findOne({ telegramId: Number(telegramId) });
           
           const { pool } = await import('../config/database');
           
-          // Если открытие из приложения (startParam === 'auth'), показываем кнопки
-          if (startParam === 'auth') {
+          // Если открытие из приложения с токеном (startParam начинается с "auth_")
+          if (startParam && startParam.startsWith('auth_')) {
+            const sessionToken = startParam.substring(5); // Убираем "auth_"
+            
+            // Проверяем сессию
+            const session = await TelegramAuthSession.findByToken(sessionToken);
+            
+            if (!session) {
+              bot?.sendMessage(
+                chatId,
+                `❌ Сессия истекла или не найдена.\n\nПожалуйста, вернитесь в приложение и попробуйте снова.`,
+                {
+                  disable_web_page_preview: true
+                }
+              );
+              return;
+            }
+            
+            // Обновляем telegramId в сессии
+            await pool.execute(
+              'UPDATE telegram_auth_sessions SET telegramId = ? WHERE sessionToken = ?',
+              [telegramId, sessionToken]
+            );
+            
+            // Показываем кнопки с токеном
+            
             if (!existingUser) {
               // Новый пользователь - показываем кнопку "Зарегистрироваться"
               bot?.sendMessage(
@@ -56,7 +81,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
                       [
                         {
                           text: '✅ Зарегистрироваться',
-                          callback_data: 'register'
+                          callback_data: `register_${sessionToken}`
                         }
                       ]
                     ]
@@ -75,7 +100,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
                       [
                         {
                           text: '✅ Подтвердить авторизацию',
-                          callback_data: 'auth'
+                          callback_data: `auth_${sessionToken}`
                         }
                       ]
                     ]
@@ -136,7 +161,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
     bot.on('callback_query', async (query) => {
       const chatId = query.message?.chat.id;
       const telegramId = query.from?.id;
-      const data = query.data; // 'register' или 'auth'
+      const data = query.data; // 'register_TOKEN' или 'auth_TOKEN' или старые форматы
       
       if (!chatId || !telegramId) {
         return;
@@ -144,9 +169,22 @@ export const initializeTelegramBot = (): TelegramBot | null => {
       
       try {
         const User = (await import('../models/User')).default;
+        const TelegramAuthSession = (await import('../models/TelegramAuthSession')).default;
         const { pool } = await import('../config/database');
         
-        if (data === 'register') {
+        // Парсим callback_data: может быть "register_TOKEN" или "auth_TOKEN"
+        let action: string;
+        let sessionToken: string | null = null;
+        
+        if (data?.includes('_')) {
+          const parts = data.split('_');
+          action = parts[0];
+          sessionToken = parts.slice(1).join('_'); // На случай, если токен содержит подчеркивания
+        } else {
+          action = data || '';
+        }
+        
+        if (action === 'register') {
           // Регистрация нового пользователя
           const existingUser = await User.findOne({ telegramId: Number(telegramId) });
           
@@ -189,11 +227,20 @@ export const initializeTelegramBot = (): TelegramBot | null => {
             password: randomPassword
           } as any);
           
-          // Устанавливаем время последней активности
-          await pool.execute(
-            'UPDATE users SET lastTelegramActivity = NOW() WHERE id = ?',
-            [newUser.id]
-          );
+          // Если есть токен сессии, обновляем его
+          if (sessionToken) {
+            await TelegramAuthSession.updateUserId(sessionToken, newUser.id!);
+            await pool.execute(
+              'UPDATE telegram_auth_sessions SET telegramId = ? WHERE sessionToken = ?',
+              [telegramId, sessionToken]
+            );
+          } else {
+            // Старый способ - обновляем время последней активности
+            await pool.execute(
+              'UPDATE users SET lastTelegramActivity = NOW() WHERE id = ?',
+              [newUser.id]
+            );
+          }
           
           await bot?.answerCallbackQuery(query.id, {
             text: '✅ Регистрация успешна!',
@@ -209,7 +256,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
           );
           
           console.log(`✅ Пользователь зарегистрирован через кнопку: ${name} (telegramId: ${telegramId})`);
-        } else if (data === 'auth') {
+        } else if (action === 'auth') {
           // Подтверждение авторизации для существующего пользователя
           const existingUser = await User.findOne({ telegramId: Number(telegramId) });
           
@@ -221,11 +268,20 @@ export const initializeTelegramBot = (): TelegramBot | null => {
             return;
           }
           
-          // Обновляем активность
-          await pool.execute(
-            'UPDATE users SET lastTelegramActivity = NOW() WHERE id = ?',
-            [existingUser.id]
-          );
+          // Если есть токен сессии, обновляем его
+          if (sessionToken) {
+            await TelegramAuthSession.updateUserId(sessionToken, existingUser.id!);
+            await pool.execute(
+              'UPDATE telegram_auth_sessions SET telegramId = ? WHERE sessionToken = ?',
+              [telegramId, sessionToken]
+            );
+          } else {
+            // Старый способ - обновляем время последней активности
+            await pool.execute(
+              'UPDATE users SET lastTelegramActivity = NOW() WHERE id = ?',
+              [existingUser.id]
+            );
+          }
           
           await bot?.answerCallbackQuery(query.id, {
             text: '✅ Авторизация подтверждена!',

@@ -3,7 +3,10 @@ import apiClient from './client';
 export type User = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
+  telegramId: number | null;
+  telegramUsername: string | null;
   createdAt?: string;
 };
 

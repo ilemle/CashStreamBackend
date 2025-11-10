@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import { pool } from '../config/database';
+import { getTelegramUserInfo } from '../services/telegramService';
 
 // Получение списка всех пользователей с пагинацией
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -30,16 +31,33 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
     const result = await User.findAll(validPage, validLimit);
     console.log(`✅ [Admin] Found ${result.total} users (page ${result.page}, limit ${result.limit})`);
     
-    // Преобразуем даты в строки для JSON
-    const formattedUsers = result.users.map(user => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt 
-        ? (user.createdAt instanceof Date 
-          ? user.createdAt.toISOString() 
-          : new Date(user.createdAt).toISOString())
-        : null
+    // Преобразуем даты в строки для JSON и получаем информацию о Telegram пользователях
+    const formattedUsers = await Promise.all(result.users.map(async (user) => {
+      let telegramUsername: string | null = null;
+      
+      // Если есть telegramId, получаем информацию о пользователе из Telegram
+      if (user.telegramId) {
+        try {
+          const telegramInfo = await getTelegramUserInfo(user.telegramId);
+          telegramUsername = telegramInfo?.username || null;
+        } catch (error) {
+          console.error(`Failed to get Telegram info for user ${user.id}:`, error);
+        }
+      }
+      
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email || null,
+        phone: user.phone || null,
+        telegramId: user.telegramId || null,
+        telegramUsername: telegramUsername,
+        createdAt: user.createdAt 
+          ? (user.createdAt instanceof Date 
+            ? user.createdAt.toISOString() 
+            : new Date(user.createdAt).toISOString())
+          : null
+      };
     }));
     
     console.log('✅ [Admin] Sending response with', formattedUsers.length, 'users');

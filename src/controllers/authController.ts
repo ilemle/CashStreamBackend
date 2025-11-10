@@ -506,6 +506,7 @@ export const resetPassword = async (req: Request, res: Response, _next: NextFunc
 };
 
 // Изменение пароля (для авторизованных пользователей)
+// Для пользователей с telegramId можно установить пароль без проверки старого
 export const changePassword = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -519,10 +520,10 @@ export const changePassword = async (req: Request, res: Response, _next: NextFun
       return;
     }
 
-    if (!currentPassword || !newPassword) {
+    if (!newPassword) {
       res.status(400).json({
         success: false,
-        message: 'Please provide current password and new password'
+        message: 'Please provide new password'
       });
       return;
     }
@@ -535,7 +536,7 @@ export const changePassword = async (req: Request, res: Response, _next: NextFun
       return;
     }
 
-    // Получаем пользователя с паролем
+    // Получаем пользователя
     if (!pool) {
       res.status(500).json({
         success: false,
@@ -559,14 +560,26 @@ export const changePassword = async (req: Request, res: Response, _next: NextFun
       return;
     }
 
-    // Проверяем текущий пароль
-    const isMatch = await User.matchPassword(currentPassword, user.password);
-    if (!isMatch) {
-      res.status(400).json({
-        success: false,
-        message: 'Current password is incorrect'
-      });
-      return;
+    // Если у пользователя есть telegramId, можно установить пароль без проверки старого
+    // Если нет telegramId, требуется текущий пароль для подтверждения
+    if (!user.telegramId) {
+      if (!currentPassword) {
+        res.status(400).json({
+          success: false,
+          message: 'Please provide current password'
+        });
+        return;
+      }
+
+      // Проверяем текущий пароль только для пользователей без telegramId
+      const isMatch = await User.matchPassword(currentPassword, user.password);
+      if (!isMatch) {
+        res.status(400).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+        return;
+      }
     }
 
     // Обновляем пароль
@@ -585,7 +598,7 @@ export const changePassword = async (req: Request, res: Response, _next: NextFun
   }
 };
 
-// Удаление аккаунта (требует подтверждения паролем)
+// Удаление аккаунта (требует подтверждения паролем, кроме пользователей с telegramId)
 export const deleteAccount = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
     const { password } = req.body;
@@ -599,15 +612,7 @@ export const deleteAccount = async (req: Request, res: Response, _next: NextFunc
       return;
     }
 
-    if (!password) {
-      res.status(400).json({
-        success: false,
-        message: 'Please provide password to confirm account deletion'
-      });
-      return;
-    }
-
-    // Получаем пользователя с паролем
+    // Получаем пользователя
     if (!pool) {
       res.status(500).json({
         success: false,
@@ -631,14 +636,26 @@ export const deleteAccount = async (req: Request, res: Response, _next: NextFunc
       return;
     }
 
-    // Проверяем пароль
-    const isMatch = await User.matchPassword(password, user.password);
-    if (!isMatch) {
-      res.status(400).json({
-        success: false,
-        message: 'Password is incorrect'
-      });
-      return;
+    // Если у пользователя есть telegramId, пароль не требуется
+    // Если нет telegramId, требуется пароль для подтверждения
+    if (!user.telegramId) {
+      if (!password) {
+        res.status(400).json({
+          success: false,
+          message: 'Please provide password to confirm account deletion'
+        });
+        return;
+      }
+
+      // Проверяем пароль только для пользователей без telegramId
+      const isMatch = await User.matchPassword(password, user.password);
+      if (!isMatch) {
+        res.status(400).json({
+          success: false,
+          message: 'Password is incorrect'
+        });
+        return;
+      }
     }
 
     // СНАЧАЛА удаляем все связанные данные (операции, бюджеты, цели, верификации)

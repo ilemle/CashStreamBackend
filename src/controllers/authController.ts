@@ -68,7 +68,12 @@ export const sendVerificationCode = async (req: Request, res: Response, _next: N
         console.log('✅ Email sent successfully');
       })
       .catch((emailError: any) => {
-        console.error('❌ Email sending error (non-blocking):', emailError);
+        // В режиме разработки это нормально - код все равно будет в логах
+        if (emailError.message?.includes('EMAIL_SERVICE_UNAVAILABLE')) {
+          console.log('⚠️ Email service unavailable, but code is saved and logged above');
+        } else {
+          console.error('❌ Email sending error (non-blocking):', emailError.message || emailError);
+        }
         // Не блокируем ответ, код уже сохранен в БД
       });
 
@@ -95,10 +100,23 @@ export const sendVerificationCode = async (req: Request, res: Response, _next: N
 
 // Подтверждение email и завершение регистрации
 export const verifyEmailAndRegister = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  const requestStartTime = Date.now();
   try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 [VERIFY EMAIL & REGISTER] Запрос на подтверждение email и регистрацию');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     const { email, code, name, password } = req.body;
+    
+    console.log('📋 Входные данные:', {
+      email: email || 'не указано',
+      code: code || 'не указано',
+      name: name || 'не указано',
+      password: password ? '***' : 'не указано'
+    });
 
     if (!email || !code || !name || !password) {
+      console.log('❌ Валидация не пройдена: отсутствуют обязательные поля');
       res.status(400).json({
         success: false,
         message: 'Please provide email, code, name and password'
@@ -106,10 +124,17 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
       return;
     }
 
-    // Проверяем код подтверждения
+    console.log('🔍 Проверка кода подтверждения...');
+    const verificationStartTime = Date.now();
     const verification = await EmailVerification.findOne({ email, code });
+    const verificationTime = Date.now() - verificationStartTime;
+    console.log(`⏱️ Проверка кода выполнена за ${verificationTime}ms`);
 
     if (!verification) {
+      console.log('❌ Код подтверждения не найден');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(400).json({
         success: false,
         message: 'Invalid verification code'
@@ -118,6 +143,10 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
     }
 
     if (verification.verified) {
+      console.log('❌ Код уже использован');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(400).json({
         success: false,
         message: 'This code has already been used'
@@ -126,6 +155,10 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
     }
 
     if (new Date(verification.expiresAt) < new Date()) {
+      console.log('❌ Код истек');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(400).json({
         success: false,
         message: 'Verification code has expired'
@@ -133,9 +166,15 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
       return;
     }
 
-    // Проверяем, не зарегистрирован ли уже пользователь
+    console.log('✅ Код подтверждения валиден');
+
+    console.log('🔍 Проверка существования пользователя...');
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ Пользователь уже существует');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(400).json({
         success: false,
         message: 'User with this email already exists'
@@ -143,59 +182,153 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
       return;
     }
 
-    // Создаем пользователя
+    console.log('✅ Пользователь не существует, создаем нового...');
+    const createStartTime = Date.now();
     const user = await User.create({ name, email, password } as IUser);
+    const createTime = Date.now() - createStartTime;
+    console.log(`⏱️ Пользователь создан за ${createTime}ms`);
     
-    // Отмечаем код как использованный
-    await EmailVerification.markAsVerified(email, code);
+    console.log('✅ Пользователь создан:', {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    });
 
-    // Генерируем токен
+    console.log('💾 Отмечаем код как использованный...');
+    await EmailVerification.markAsVerified(email, code);
+    console.log('✅ Код отмечен как использованный');
+
+    console.log('🎫 Генерация JWT токена...');
+    const tokenStartTime = Date.now();
     const token = generateToken(user.id!);
+    const tokenTime = Date.now() - tokenStartTime;
+    console.log(`⏱️ Токен сгенерирован за ${tokenTime}ms`);
+
+    const totalTime = Date.now() - requestStartTime;
+    console.log('📊 Результат регистрации:', {
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      tokenGenerated: true
+    });
+    console.log(`⏱️ Общее время обработки запроса: ${totalTime}ms`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [VERIFY EMAIL & REGISTER] Регистрация успешна');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     res.status(201).json({
       success: true,
       data: { user: { id: user.id, name: user.name, email: user.email }, token }
     });
+    return;
   } catch (err: any) {
-    console.error('Verify email and register error:', err);
+    const totalTime = Date.now() - requestStartTime;
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [VERIFY EMAIL & REGISTER] Ошибка при регистрации');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', err.message);
+    console.error('❌ Stack:', err.stack);
+    console.error(`⏱️ Время до ошибки: ${totalTime}ms`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     res.status(500).json({
       success: false,
       message: err.message || 'Registration failed'
     });
+    return;
   }
 };
 
 export const login = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  const requestStartTime = Date.now();
   try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔐 [LOGIN] Запрос на авторизацию');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     const { email, password } = req.body;
+    
+    console.log('📋 Входные данные:', {
+      email: email || 'не указано',
+      password: password ? '***' : 'не указано'
+    });
 
     if (!email || !password) {
+      console.log('❌ Валидация не пройдена: отсутствуют email или password');
       res.status(400).json({ success: false, message: 'Please provide email and password' });
       return;
     }
 
+    console.log('🔍 Поиск пользователя в базе данных...');
+    const dbStartTime = Date.now();
     const user = await User.findOne({ email });
+    const dbTime = Date.now() - dbStartTime;
+    console.log(`⏱️ Поиск пользователя выполнен за ${dbTime}ms`);
 
     if (!user) {
+      console.log('❌ Пользователь не найден');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(401).json({ success: false, message: 'Invalid credentials' });
       return;
     }
 
+    console.log('✅ Пользователь найден:', {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    });
+
+    console.log('🔐 Проверка пароля...');
+    const passwordCheckStartTime = Date.now();
     const isMatch = await User.matchPassword(password, user.password);
+    const passwordCheckTime = Date.now() - passwordCheckStartTime;
+    console.log(`⏱️ Проверка пароля выполнена за ${passwordCheckTime}ms`);
 
     if (!isMatch) {
+      console.log('❌ Пароль неверный');
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`⏱️ Общее время обработки: ${totalTime}ms`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       res.status(401).json({ success: false, message: 'Invalid credentials' });
       return;
     }
 
+    console.log('✅ Пароль верный');
+    console.log('🎫 Генерация JWT токена...');
+    const tokenStartTime = Date.now();
     const token = generateToken(user.id!);
+    const tokenTime = Date.now() - tokenStartTime;
+    console.log(`⏱️ Токен сгенерирован за ${tokenTime}ms`);
+
+    const totalTime = Date.now() - requestStartTime;
+    console.log('📊 Результат авторизации:', {
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      tokenGenerated: true
+    });
+    console.log(`⏱️ Общее время обработки запроса: ${totalTime}ms`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [LOGIN] Авторизация успешна');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     res.status(200).json({
       success: true,
       data: { user: { id: user.id, name: user.name, email: user.email }, token }
     });
+    return;
   } catch (err: any) {
+    const totalTime = Date.now() - requestStartTime;
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [LOGIN] Ошибка при авторизации');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', err.message);
+    console.error('❌ Stack:', err.stack);
+    console.error(`⏱️ Время до ошибки: ${totalTime}ms`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     res.status(500).json({ success: false, message: err.message || 'Login failed' });
+    return;
   }
 };
 
@@ -260,7 +393,12 @@ export const requestPasswordReset = async (req: Request, res: Response, _next: N
         console.log('✅ Password reset email sent successfully');
       })
       .catch((emailError: any) => {
-        console.error('❌ Password reset email sending error (non-blocking):', emailError);
+        // В режиме разработки это нормально - код все равно будет в логах
+        if (emailError.message?.includes('EMAIL_SERVICE_UNAVAILABLE')) {
+          console.log('⚠️ Email service unavailable, but code is saved and logged above');
+        } else {
+          console.error('❌ Password reset email sending error (non-blocking):', emailError.message || emailError);
+        }
       });
 
     // Отвечаем сразу

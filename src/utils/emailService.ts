@@ -63,10 +63,31 @@ const createTransporter = async (): Promise<nodemailer.Transporter> => {
       
       // Проверяем подключение
       try {
+        console.log('🔍 Проверка SMTP подключения...');
         await cachedTransporter.verify();
         console.log('✅ SMTP connection verified successfully');
       } catch (verifyError: any) {
-        console.error('❌ SMTP verification failed:', verifyError.message);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ SMTP verification failed');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ Ошибка:', verifyError.message);
+        console.error('❌ Код ошибки:', verifyError.code);
+        console.error('❌ Команда:', verifyError.command);
+        console.error('📧 SMTP настройки:', {
+          host: process.env.SMTP_HOST,
+          port: port,
+          secure: secure,
+          user: process.env.SMTP_USER,
+          passLength: process.env.SMTP_PASS?.length || 0,
+          passFirstChars: process.env.SMTP_PASS?.substring(0, 3) || 'N/A'
+        });
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('💡 Возможные причины:');
+        console.error('   1. Неверный пароль приложения');
+        console.error('   2. Пароль приложения еще не активировался (для Yandex - 2-3 часа)');
+        console.error('   3. Неверный email в SMTP_USER');
+        console.error('   4. Не включены пароли приложений в настройках почты');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         // Не бросаем ошибку, продолжаем - возможно, письмо все равно отправится
       }
       
@@ -243,9 +264,18 @@ export const sendPasswordResetEmail = async (
       console.log('📧 Password reset code (for testing):', code);
     }
   } catch (error: any) {
-    console.error('❌ Error sending password reset email:', error.message);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Error sending password reset email');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', error.message);
+    console.error('❌ Код ошибки:', error.code);
+    console.error('❌ Команда:', error.command);
+    if (error.response) {
+      console.error('❌ SMTP Response:', error.response);
+    }
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // В режиме разработки не бросаем ошибку, а просто логируем код
+    // В режиме разработки логируем код, но все равно бросаем ошибку для правильной обработки
     if (process.env.NODE_ENV !== 'production') {
       console.log('');
       console.log('═══════════════════════════════════════════════════════');
@@ -255,8 +285,8 @@ export const sendPasswordResetEmail = async (
       console.log('📧 Reset URL:', resetUrl);
       console.log('═══════════════════════════════════════════════════════');
       console.log('');
-      // Не бросаем ошибку в режиме разработки
-      return;
+      // Бросаем специальную ошибку, которая будет обработана в контроллере
+      throw new Error(`EMAIL_SERVICE_UNAVAILABLE: ${error.message || 'Unknown error'}`);
     }
     
     // В продакшене бросаем ошибку
@@ -383,7 +413,7 @@ export const sendVerificationEmail = async (
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Verification email sent:', info.messageId);
+    console.log('✅ Verification email sent successfully:', info.messageId);
     
     // В режиме разработки с Ethereal Email выводим ссылку для просмотра и код
     if (process.env.NODE_ENV !== 'production' && info.messageId) {
@@ -394,9 +424,18 @@ export const sendVerificationEmail = async (
       console.log('📧 Verification code (for testing):', code);
     }
   } catch (error: any) {
-    console.error('❌ Error sending verification email:', error.message);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Error sending verification email');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', error.message);
+    console.error('❌ Код ошибки:', error.code);
+    console.error('❌ Команда:', error.command);
+    if (error.response) {
+      console.error('❌ SMTP Response:', error.response);
+    }
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // В режиме разработки не бросаем ошибку, а просто логируем код
+    // В режиме разработки логируем код, но все равно бросаем ошибку для правильной обработки
     if (process.env.NODE_ENV !== 'production') {
       console.log('');
       console.log('═══════════════════════════════════════════════════════');
@@ -406,8 +445,8 @@ export const sendVerificationEmail = async (
       console.log('📧 Verification URL:', verificationUrl);
       console.log('═══════════════════════════════════════════════════════');
       console.log('');
-      // Не бросаем ошибку в режиме разработки
-      return;
+      // Бросаем специальную ошибку, которая будет обработана в контроллере
+      throw new Error(`EMAIL_SERVICE_UNAVAILABLE: ${error.message || 'Unknown error'}`);
     }
     
     // В продакшене бросаем ошибку

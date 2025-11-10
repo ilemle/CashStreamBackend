@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { 
   sendVerificationCode, 
-  verifyEmailAndRegister, 
+  verifyEmailAndRegister,
+  sendPhoneVerificationCode,
+  verifyPhoneAndRegister,
   login, 
   getMe,
   requestPasswordReset,
@@ -13,11 +15,15 @@ import { protect } from '../middleware/auth';
 
 const router = Router();
 
-// Регистрация
+// Регистрация по email
 router.post('/register/send-code', sendVerificationCode);
 router.post('/register/verify', verifyEmailAndRegister);
 
-// Вход
+// Регистрация по телефону
+router.post('/register/phone/send-code', sendPhoneVerificationCode);
+router.post('/register/phone/verify', verifyPhoneAndRegister);
+
+// Вход (поддерживает email и phone)
 router.post('/login', login);
 
 // Восстановление пароля

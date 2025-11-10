@@ -22,7 +22,10 @@ async function runMigration(filename: string) {
     console.log(`✅ Connected to database`);
 
     // Read migration file
-    const migrationPath = path.join(__dirname, '..', 'migrations', filename);
+    // Используем process.cwd() для получения корневой директории проекта
+    // filename уже содержит путь от migrations/
+    const migrationPath = path.join(process.cwd(), filename);
+    console.log(`📂 Migration path: ${migrationPath}`);
     const sql = fs.readFileSync(migrationPath, 'utf-8');
 
     console.log(`📄 Running migration: ${filename}`);

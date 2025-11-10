@@ -9,7 +9,10 @@ import {
   requestPasswordReset,
   resetPassword,
   changePassword,
-  deleteAccount
+  deleteAccount,
+  getTelegramBotUrl,
+  loginWithTelegram,
+  checkTelegramAuth
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 
@@ -38,6 +41,11 @@ router.delete('/account', protect, deleteAccount);
 
 // Получение информации о текущем пользователе
 router.get('/me', protect, getMe);
+
+// Telegram авторизация
+router.get('/telegram/bot-url', getTelegramBotUrl);
+router.post('/telegram/login', loginWithTelegram);
+router.get('/telegram/check', checkTelegramAuth);
 
 export default router;
 

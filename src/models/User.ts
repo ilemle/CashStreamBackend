@@ -7,6 +7,7 @@ export interface IUser {
   name: string;
   email?: string;
   phone?: string;
+  telegramId?: number;
   password: string;
   createdAt?: Date;
 }
@@ -21,14 +22,14 @@ class UserModel {
     const hashedPassword = await bcrypt.hash(userData.password, salt);
 
     await pool.execute(
-      'INSERT INTO users (id, name, email, phone, password) VALUES (?, ?, ?, ?, ?)',
-      [id, userData.name, userData.email || null, userData.phone || null, hashedPassword]
+      'INSERT INTO users (id, name, email, phone, telegramId, password) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, userData.name, userData.email || null, userData.phone || null, userData.telegramId || null, hashedPassword]
     );
 
     return { ...userData, id, password: hashedPassword };
   }
 
-  static async findOne(filter: { email?: string; phone?: string }): Promise<IUser | null> {
+  static async findOne(filter: { email?: string; phone?: string; telegramId?: number }): Promise<IUser | null> {
     let query = 'SELECT * FROM users WHERE ';
     const params: any[] = [];
     
@@ -38,6 +39,9 @@ class UserModel {
     } else if (filter.phone) {
       query += 'phone = ?';
       params.push(filter.phone);
+    } else if (filter.telegramId) {
+      query += 'telegramId = ?';
+      params.push(filter.telegramId);
     } else {
       return null;
     }
@@ -49,7 +53,7 @@ class UserModel {
 
   static async findById(id: string): Promise<IUser | null> {
     const [rows] = await pool.execute(
-      'SELECT id, name, email, phone, createdAt FROM users WHERE id = ?',
+      'SELECT id, name, email, phone, telegramId, createdAt FROM users WHERE id = ?',
       [id]
     );
     const users = rows as IUser[];
@@ -97,7 +101,7 @@ class UserModel {
     // MySQL2 не поддерживает параметры для LIMIT и OFFSET в prepared statements,
     // поэтому используем числа напрямую (значения уже валидированы и безопасны)
     const [rows] = await pool.execute(
-      `SELECT id, name, email, phone, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
+      `SELECT id, name, email, phone, telegramId, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
     );
     
     const users = rows as IUser[];

@@ -13,6 +13,10 @@ dotenv.config();
 // Connect to database
 connectDB().catch(console.error);
 
+// Initialize Telegram bot
+import { initializeTelegramBot } from './services/telegramService';
+initializeTelegramBot();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

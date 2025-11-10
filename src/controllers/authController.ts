@@ -6,6 +6,7 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailSer
 import { sendVerificationSMS, normalizePhoneNumber, validatePhoneNumber } from '../utils/smsService';
 import { pool } from '../config/database';
 import jwt from 'jsonwebtoken';
+import { getBotUrl, getBotAppUrl, getTelegramUserInfo } from '../services/telegramService';
 
 const generateToken = (id: string): string => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'default-secret', {
@@ -942,6 +943,245 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
     res.status(500).json({
       success: false,
       message: err.message || 'Registration failed'
+    });
+    return;
+  }
+};
+
+// Получение URL Telegram бота для авторизации
+export const getTelegramBotUrl = async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    const botUrl = await getBotUrl();
+    const botAppUrl = await getBotAppUrl();
+    
+    if (!botUrl || !botAppUrl) {
+      res.status(503).json({
+        success: false,
+        message: 'Telegram bot is not available'
+      });
+      return;
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        botUrl, // Для веб-версии
+        botAppUrl // Для мобильного приложения (tg://)
+      }
+    });
+  } catch (err: any) {
+    console.error('❌ Get Telegram bot URL error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to get Telegram bot URL'
+    });
+  }
+};
+
+// Проверка и авторизация через Telegram (для пользователей, которые нажали /start)
+export const checkTelegramAuth = async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  try {
+    // Ищем пользователей, которые взаимодействовали с Telegram ботом за последние 5 минут
+    // Проверяем по времени последней активности в Telegram
+    const [rows] = await pool.execute(
+      `SELECT id, name, telegramId, createdAt, lastTelegramActivity
+       FROM users 
+       WHERE telegramId IS NOT NULL 
+       AND (
+         lastTelegramActivity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+         OR (lastTelegramActivity IS NULL AND createdAt > DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+       )
+       ORDER BY COALESCE(lastTelegramActivity, createdAt) DESC 
+       LIMIT 1`
+    );
+    
+    const recentUsers = rows as IUser[];
+    
+    if (recentUsers.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: 'No recent Telegram authentication found. Please press /start in the bot first.'
+      });
+      return;
+    }
+    
+    const user = recentUsers[0];
+    
+    // Получаем информацию о пользователе из Telegram
+    const { getTelegramUserInfo } = await import('../services/telegramService');
+    const userInfo = await getTelegramUserInfo(user.telegramId!);
+    
+    if (userInfo) {
+      const name = userInfo.firstName 
+        ? (userInfo.lastName ? `${userInfo.firstName} ${userInfo.lastName}` : userInfo.firstName)
+        : (userInfo.username || 'Telegram User');
+      
+      // Обновляем имя, если оно изменилось
+      if (user.name !== name) {
+        await pool.execute(
+          'UPDATE users SET name = ? WHERE id = ?',
+          [name, user.id]
+        );
+        user.name = name;
+      }
+    }
+    
+    // Генерируем токен
+    const token = generateToken(user.id!);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          telegramId: user.telegramId
+        },
+        token
+      }
+    });
+  } catch (err: any) {
+    console.error('❌ Check Telegram auth error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to check Telegram authentication'
+    });
+  }
+};
+
+// Авторизация через Telegram
+export const loginWithTelegram = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  const requestStartTime = Date.now();
+  try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📱 [TELEGRAM LOGIN] Запрос на авторизацию через Telegram');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    const { telegramId } = req.body;
+    
+    console.log('📋 Входные данные:', {
+      telegramId: telegramId || 'не указано'
+    });
+
+    if (!telegramId) {
+      console.log('❌ Валидация не пройдена: отсутствует telegramId');
+      res.status(400).json({ 
+        success: false, 
+        message: 'Telegram ID is required' 
+      });
+      return;
+    }
+
+    // Получаем информацию о пользователе из Telegram Bot API
+    let finalFirstName: string | undefined;
+    let finalLastName: string | undefined;
+    let finalUsername: string | undefined;
+    
+    const userInfo = await getTelegramUserInfo(Number(telegramId));
+    if (userInfo) {
+      finalFirstName = userInfo.firstName;
+      finalLastName = userInfo.lastName;
+      finalUsername = userInfo.username;
+    }
+
+    // Формируем имя пользователя
+    const name = finalFirstName 
+      ? (finalLastName ? `${finalFirstName} ${finalLastName}` : finalFirstName)
+      : (finalUsername || 'Telegram User');
+
+    console.log('🔍 Поиск пользователя в базе данных...');
+    const dbStartTime = Date.now();
+    let user = await User.findOne({ telegramId: Number(telegramId) });
+    const dbTime = Date.now() - dbStartTime;
+    console.log(`⏱️ Поиск пользователя выполнен за ${dbTime}ms`);
+
+    if (!user) {
+      console.log('✅ Пользователь не найден, создаем нового...');
+      const createStartTime = Date.now();
+      
+      // Создаем нового пользователя без пароля (авторизация через Telegram)
+      // Генерируем случайный пароль, который никогда не будет использован
+      const randomPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16);
+      
+      user = await User.create({
+        name,
+        telegramId: Number(telegramId),
+        password: randomPassword
+      } as IUser);
+      
+      const createTime = Date.now() - createStartTime;
+      console.log(`⏱️ Пользователь создан за ${createTime}ms`);
+      
+      console.log('✅ Пользователь создан:', {
+        id: user.id,
+        name: user.name,
+        telegramId: user.telegramId
+      });
+    } else {
+      console.log('✅ Пользователь найден:', {
+        id: user.id,
+        name: user.name,
+        telegramId: user.telegramId
+      });
+      
+      // Обновляем имя, если оно изменилось
+      if (user.name !== name) {
+        console.log('🔄 Обновляем имя пользователя...');
+        await pool.execute(
+          'UPDATE users SET name = ? WHERE id = ?',
+          [name, user.id]
+        );
+        user.name = name;
+      }
+    }
+
+    console.log('🎫 Генерация JWT токена...');
+    const tokenStartTime = Date.now();
+    const token = generateToken(user.id!);
+    const tokenTime = Date.now() - tokenStartTime;
+    console.log(`⏱️ Токен сгенерирован за ${tokenTime}ms`);
+
+    const totalTime = Date.now() - requestStartTime;
+    console.log('📊 Результат авторизации через Telegram:', {
+      userId: user.id,
+      userName: user.name,
+      telegramId: user.telegramId,
+      tokenGenerated: true,
+      isNewUser: !user.createdAt || (Date.now() - new Date(user.createdAt).getTime()) < 5000
+    });
+    console.log(`⏱️ Общее время обработки запроса: ${totalTime}ms`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [TELEGRAM LOGIN] Авторизация успешна');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    res.status(200).json({
+      success: true,
+      data: { 
+        user: { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          phone: user.phone,
+          telegramId: user.telegramId
+        }, 
+        token 
+      }
+    });
+    return;
+  } catch (err: any) {
+    const totalTime = Date.now() - requestStartTime;
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [TELEGRAM LOGIN] Ошибка при авторизации через Telegram');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Ошибка:', err.message);
+    console.error('❌ Stack:', err.stack);
+    console.error(`⏱️ Время до ошибки: ${totalTime}ms`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Telegram login failed' 
     });
     return;
   }

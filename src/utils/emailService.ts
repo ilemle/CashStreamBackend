@@ -380,9 +380,7 @@ export const sendVerificationEmail = async (
                 <div class="code">${code}</div>
               </div>
               
-              <p>Или перейдите по ссылке:</p>
-              <a href="${verificationUrl}" class="button">Подтвердить email</a>
-              
+
               <p style="margin-top: 30px; color: #666; font-size: 12px;">
                 Этот код действителен в течение 10 минут. Если вы не регистрировались в CashStream, просто проигнорируйте это письмо.
               </p>

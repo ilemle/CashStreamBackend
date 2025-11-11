@@ -196,18 +196,46 @@ const sendSMSViaSMSru = async (to: string, message: string): Promise<void> => {
   }
 
   const axios = require('axios');
+  // Убираем + и форматируем номер для SMS.ru (формат: 79991234567)
   const phone = to.replace('+', '');
-  const response = await axios.get('https://sms.ru/sms/send', {
-    params: {
-      api_id: smsConfig.smsruApiId,
-      to: phone,
-      msg: message,
-      json: 1,
-    },
-  });
+  
+  try {
+    const response = await axios.post('https://sms.ru/sms/send', null, {
+      params: {
+        api_id: smsConfig.smsruApiId,
+        to: phone,
+        msg: message,
+        json: 1,
+      },
+    });
 
-  if (response.data.status !== 'OK') {
-    throw new Error(`SMS.ru error: ${response.data.status_text || 'Unknown error'}`);
+    // Проверяем статус ответа
+    if (response.data.status === 'OK') {
+      // Проверяем статус отправки для каждого номера
+      const smsStatus = response.data.sms?.[phone];
+      if (smsStatus && smsStatus.status === 'OK') {
+        console.log(`✅ SMS.ru: SMS sent successfully to ${to}, SMS ID: ${smsStatus.sms_id}`);
+        return;
+      } else {
+        const errorText = smsStatus?.status_text || 'Unknown error';
+        throw new Error(`SMS.ru error: ${errorText}`);
+      }
+    } else {
+      const errorText = response.data.status_text || 'Unknown error';
+      throw new Error(`SMS.ru error: ${errorText}`);
+    }
+  } catch (error: any) {
+    if (error.response) {
+      // Ошибка от API
+      const errorText = error.response.data?.status_text || error.response.data?.message || error.message;
+      throw new Error(`SMS.ru API error: ${errorText}`);
+    } else if (error.request) {
+      // Запрос был отправлен, но ответа не получено
+      throw new Error('SMS.ru: No response from server');
+    } else {
+      // Ошибка при настройке запроса
+      throw new Error(`SMS.ru error: ${error.message}`);
+    }
   }
 };
 

@@ -13,6 +13,9 @@ RUN yarn install --frozen-lockfile
 # Копируем остальной код приложения
 COPY . .
 
+# Явно копируем папку scripts для миграций
+COPY scripts scripts
+
 # Собираем TypeScript проект
 # Скрипт build:backend скомпилирует только бэкенд
 RUN yarn build:backend

@@ -1,7 +1,7 @@
 services:
   backend:
     env_file:
-          - .env.production # Указываем файл с переменными окружения
+      - .env.production # Указываем файл с переменными окружения
     build:
       context: .
       dockerfile: Dockerfile

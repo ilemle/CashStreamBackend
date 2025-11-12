@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS categories (
   name VARCHAR(255) NOT NULL,
   icon VARCHAR(100),
   isSystem BOOLEAN DEFAULT FALSE,
-  userId INT,
+  userId VARCHAR(36),
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user (userId),
   INDEX idx_system (isSystem),

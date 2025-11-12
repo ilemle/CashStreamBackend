@@ -1,25 +1,45 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: cashstream-ollama
+  backend:
+    env_file:
+          - .env.production # Указываем файл с переменными окружения
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "11434:11434"
-    volumes:
-      # Хранилище для моделей (чтобы они не удалялись при перезапуске)
-      - ollama-data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
+      - "3000:3000" # Снова маппируем порт для прямого доступа
     restart: unless-stopped
-    # Для GPU поддержки (раскомментируйте если нужно)
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    depends_on:
+      - db # Теперь backend зависит от базы данных
+
+    db:
+      image: mysql:8.0
+      container_name: cashstream-mysql
+      restart: unless-stopped
+      env_file:
+        - .env.production # Загружаем переменные окружения для базы данных
+      environment:
+        MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+        MYSQL_DATABASE: ${DB_NAME}
+        MYSQL_USER: ${DB_USER}
+        MYSQL_PASSWORD: ${DB_PASSWORD}
+      volumes:
+        - db-data:/var/lib/mysql # Сохраняем данные MySQL в volume
+
+    # ollama:
+    #   image: ollama/ollama:latest
+    #   container_name: cashstream-ollama
+    #   ports:
+    #     - "11434:11434"
+    #   volumes:
+    #     # Хранилище для моделей (чтобы они не удалялись при перезапуске)
+    #     - ollama-data:/root/.ollama
+    #   environment:
+    #     - OLLAMA_HOST=0.0.0.0
+    #   restart: unless-stopped
 
 volumes:
+  db-data: # Объявляем volume для базы данных
+    driver: local
   ollama-data:
     driver: local
 

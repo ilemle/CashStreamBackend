@@ -34,8 +34,8 @@ RUN yarn install --production --frozen-lockfile
 
 # Копируем собранные файлы из stage сборки
 COPY --from=builder /app/dist ./dist
-# Копируем скомпилированные скрипты в финальный образ
-COPY --from=builder /app/dist/scripts ./dist/scripts
+# Копируем директорию scripts в финальный образ
+COPY --from=builder /app/scripts ./scripts
 # Копируем директорию migrations в финальный образ
 COPY --from=builder /app/migrations ./migrations
 

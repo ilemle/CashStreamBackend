@@ -7,9 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000" # Снова маппируем порт для прямого доступа
-    volumes:
-      - db-data:/var/lib/mysql
-      - ./migrations:/docker-entrypoint-initdb.d  
     restart: unless-stopped
     depends_on:
       - db # Теперь backend зависит от базы данных
@@ -28,7 +25,9 @@ services:
     ports:
       - "3306:3306" # Пробрасываем порт MySQL на хостовую машину
     volumes:
-        - db-data:/var/lib/mysql # Сохраняем данные MySQL в volume
+      - db-data:/var/lib/mysql # Сохраняем данные MySQL в volume
+      - ./migrations:/docker-entrypoint-initdb.d  
+
 
   # ollama:
   #   image: ollama/ollama:latest

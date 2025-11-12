@@ -15,8 +15,8 @@
     "type-check": "tsc --noEmit",
     "dev:clean": "pkill -f 'node.*3000' || true; sleep 2; yarn dev",
     "install:all": "yarn install && cd admin && yarn install",
-    "migrate": "node dist/scripts/runMigration.js",
-    "migrate:all": "node dist/scripts/runAllMigrations.js"
+    "migrate": "ts-node scripts/runMigration.ts",
+    "migrate:all": "ts-node --esm scripts/runAllMigrations.ts"
   },
   "keywords": [
     "express",

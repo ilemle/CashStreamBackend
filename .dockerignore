@@ -1,0 +1,12 @@
+node_modules
+dist
+admin
+.git
+.env*
+Dockerfile
+docker-compose.yml
+README.md
+yarn.lock
+package.json
+scripts
+migrations

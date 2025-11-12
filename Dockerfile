@@ -43,4 +43,4 @@ COPY --from=builder /app/migrations ./migrations
 EXPOSE 3000
 
 # Команда для запуска приложения
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

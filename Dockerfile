@@ -36,6 +36,8 @@ RUN yarn install --production --frozen-lockfile
 COPY --from=builder /app/dist ./dist
 # Копируем скомпилированные скрипты в финальный образ
 COPY --from=builder /app/dist/scripts ./dist/scripts
+# Копируем директорию migrations в финальный образ
+COPY --from=builder /app/migrations ./migrations
 
 # Открываем порт, на котором будет работать приложение
 EXPOSE 3000

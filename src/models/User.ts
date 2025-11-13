@@ -9,7 +9,8 @@ export interface IUser {
   phone?: string;
   telegramId?: number;
   password: string;
-  createdAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 class UserModel {
@@ -53,7 +54,7 @@ class UserModel {
 
   static async findById(id: string): Promise<IUser | null> {
     const [rows] = await pool.execute(
-      'SELECT id, username, email, phone, telegramId, createdAt FROM users WHERE id = ?',
+      'SELECT id, username, email, phone, telegramId, created_at FROM users WHERE id = ?',
       [id]
     );
     const users = rows as IUser[];
@@ -101,7 +102,7 @@ class UserModel {
     // MySQL2 не поддерживает параметры для LIMIT и OFFSET в prepared statements,
     // поэтому используем числа напрямую (значения уже валидированы и безопасны)
     const [rows] = await pool.execute(
-      `SELECT id, username, email, phone, telegramId, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
+      `SELECT id, username, email, phone, telegramId, created_at FROM users ORDER BY created_at DESC LIMIT ${validLimit} OFFSET ${offset}`
     );
     
     const users = rows as IUser[];

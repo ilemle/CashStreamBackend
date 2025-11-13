@@ -3,7 +3,7 @@ import Budget, { IBudget } from '../models/Budget';
 
 export const getBudgets = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const budgets = await Budget.find({ user: req.user?.id || '' });
+    const budgets = await Budget.find({ userId: req.user?.id || '' });
     res.status(200).json({ success: true, count: budgets.length, data: budgets });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -12,7 +12,7 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const budgetData = { ...req.body, user: req.user?.id || '' };
+    const budgetData = { ...req.body, userId: req.user?.id || '' };
     const budget = await Budget.create(budgetData as IBudget);
     res.status(201).json({ success: true, data: budget });
   } catch (err: any) {
@@ -28,7 +28,7 @@ export const updateBudget = async (req: Request, res: Response, _next: NextFunct
       return;
     }
     
-    if (existingBudget.user !== req.user?.id) {
+    if (existingBudget.userId !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
@@ -48,7 +48,7 @@ export const deleteBudget = async (req: Request, res: Response, _next: NextFunct
       return;
     }
     
-    if (existingBudget.user !== req.user?.id) {
+    if (existingBudget.userId !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }

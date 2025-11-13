@@ -7,10 +7,10 @@ export interface IGoal {
   target: number;
   current: number;
   deadline: string;
-  userId: string;
+  user: string;
   autoFill?: boolean;
   autoFillPercentage?: number;
-  created_at?: Date;
+  createdAt?: Date;
 }
 
 class GoalModel {
@@ -25,10 +25,10 @@ class GoalModel {
     };
   }
 
-  static async find(filter: { userId: string }): Promise<IGoal[]> {
+  static async find(filter: { user: string }): Promise<IGoal[]> {
     const [rows] = await pool.execute(
-      'SELECT * FROM goals WHERE userId = ?',
-      [filter.userId]
+      'SELECT * FROM goals WHERE user = ?',
+      [filter.user]
     );
     return (rows as any[]).map(this.transformGoal);
   }
@@ -45,8 +45,8 @@ class GoalModel {
   static async create(data: IGoal): Promise<IGoal> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO goals (id, title, target, current, deadline, userId, autoFill, autoFillPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.target, data.current, data.deadline, data.userId, data.autoFill || false, data.autoFillPercentage || null]
+      'INSERT INTO goals (id, title, target, current, deadline, user, autoFill, autoFillPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.target, data.current, data.deadline, data.user, data.autoFill || false, data.autoFillPercentage || null]
     );
     return this.transformGoal({ ...data, id });
   }
@@ -56,7 +56,7 @@ class GoalModel {
     const values: any[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'id' && key !== 'userId') {
+      if (value !== undefined && key !== 'id' && key !== 'user') {
         sets.push(`${key} = ?`);
         values.push(value);
       }

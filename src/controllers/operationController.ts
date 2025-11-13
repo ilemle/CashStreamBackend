@@ -117,7 +117,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     });
     
     // Строим базовый запрос
-    const query: any = { userId: userId || '' };
+    const query: any = { user: userId || '' };
     
     // Добавляем фильтрацию по датам, если они переданы
     if (startDate || endDate) {
@@ -244,7 +244,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
 export const getOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const op = await Operation.findById(req.params.id);
-    if (!op || op.userId !== req.user?.id) {
+    if (!op || op.user !== req.user?.id) {
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
     }
@@ -269,18 +269,18 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       fromAccount: req.body.fromAccount,
       toAccount: req.body.toAccount,
       currency: req.body.currency || 'RUB',  // Валюта операции
-      userId: req.user?.id || ''
+      user: req.user?.id || ''
     };
     const op = await Operation.create(opData);
     
     // Автоматически обновляем бюджет при создании операции расхода
-    if (op.type === 'expense' && op.category && op.userId) {
-      await updateBudgetSpent(op.userId, op.category, Math.abs(op.amount), 'add');
+    if (op.type === 'expense' && op.category && op.user) {
+      await updateBudgetSpent(op.user, op.category, Math.abs(op.amount), 'add');
     }
     
     // Автоматически пополняем цели при создании операции дохода
-    if (op.type === 'income' && op.userId) {
-      await autoFillGoals(op.userId, Math.abs(op.amount));
+    if (op.type === 'income' && op.user) {
+      await autoFillGoals(op.user, Math.abs(op.amount));
     }
     
     const opWithConversion = await addCurrencyConversion(op, req);
@@ -300,7 +300,7 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Проверяем, что операция принадлежит текущему пользователю
-    if (existingOp.userId !== req.user?.id) {
+    if (existingOp.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
@@ -315,14 +315,14 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     const newType = req.body.type || oldType;
     
     // Откатываем старую операцию из бюджета (если была расходом)
-    if (oldType === 'expense' && oldCategory && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, oldCategory, oldAmount, 'subtract');
+    if (oldType === 'expense' && oldCategory && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, oldCategory, oldAmount, 'subtract');
     }
     
     // Откатываем автопополнение целей (если была доходом)
     // Примечание: мы не можем точно откатить, так как процент мог измениться,
     // поэтому просто логируем это
-    if (oldType === 'income' && existingOp.userId && newType !== 'income') {
+    if (oldType === 'income' && existingOp.user && newType !== 'income') {
       console.log(`⚠️ Operation type changed from income to ${newType}, goals were auto-filled and cannot be automatically reverted`);
     }
     
@@ -330,13 +330,13 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
     
     // Добавляем новую операцию в бюджет (если расход)
-    if (newType === 'expense' && newCategory && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, newCategory, newAmount, 'add');
+    if (newType === 'expense' && newCategory && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, newCategory, newAmount, 'add');
     }
     
     // Автопополняем цели (если теперь доход и был не доходом)
-    if (newType === 'income' && oldType !== 'income' && existingOp.userId) {
-      await autoFillGoals(existingOp.userId, newAmount);
+    if (newType === 'income' && oldType !== 'income' && existingOp.user) {
+      await autoFillGoals(existingOp.user, newAmount);
     }
     
     const opWithConversion = await addCurrencyConversion(op || existingOp, req);
@@ -355,14 +355,14 @@ export const deleteOperation = async (req: Request, res: Response, _next: NextFu
       return;
     }
     
-    if (existingOp.userId !== req.user?.id) {
+    if (existingOp.user !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
     
     // Автоматически обновляем бюджет при удалении операции расхода
-    if (existingOp.type === 'expense' && existingOp.category && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, existingOp.category, Math.abs(existingOp.amount), 'subtract');
+    if (existingOp.type === 'expense' && existingOp.category && existingOp.user) {
+      await updateBudgetSpent(existingOp.user, existingOp.category, Math.abs(existingOp.amount), 'subtract');
     }
     
     await Operation.findByIdAndDelete(req.params.id);
@@ -432,7 +432,7 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
       fromAccount: op.fromAccount || undefined,
       toAccount: op.toAccount || undefined,
       currency: op.currency || 'RUB',
-      userId: req.user?.id || ''
+      user: req.user?.id || ''
     }));
 
     // Создаем операции в транзакции
@@ -441,13 +441,13 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     // Обновляем бюджеты и цели для каждой операции
     for (const op of createdOperations) {
       // Автоматически обновляем бюджет при создании операции расхода
-      if (op.type === 'expense' && op.category && op.userId) {
-        await updateBudgetSpent(op.userId, op.category, Math.abs(op.amount), 'add');
+      if (op.type === 'expense' && op.category && op.user) {
+        await updateBudgetSpent(op.user, op.category, Math.abs(op.amount), 'add');
       }
       
       // Автоматически пополняем цели при создании операции дохода
-      if (op.type === 'income' && op.userId) {
-        await autoFillGoals(op.userId, Math.abs(op.amount));
+      if (op.type === 'income' && op.user) {
+        await autoFillGoals(op.user, Math.abs(op.amount));
       }
     }
 

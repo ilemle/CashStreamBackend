@@ -7,8 +7,8 @@ export interface IBudget {
   spent: number;
   budget: number;
   color: string;
-  userId: string;
-  created_at?: Date;
+  user: string;
+  createdAt?: Date;
 }
 
 class BudgetModel {
@@ -21,10 +21,10 @@ class BudgetModel {
     };
   }
 
-  static async find(filter: { userId: string }): Promise<IBudget[]> {
+  static async find(filter: { user: string }): Promise<IBudget[]> {
     const [rows] = await pool.execute(
-      'SELECT * FROM budgets WHERE userId = ?',
-      [filter.userId]
+      'SELECT * FROM budgets WHERE user = ?',
+      [filter.user]
     );
     return (rows as any[]).map(this.transformBudget);
   }
@@ -41,8 +41,8 @@ class BudgetModel {
   static async create(data: IBudget): Promise<IBudget> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO budgets (id, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, data.category, data.spent, data.budget, data.color, data.userId]
+      'INSERT INTO budgets (id, category, spent, budget, color, user) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, data.category, data.spent, data.budget, data.color, data.user]
     );
     return this.transformBudget({ ...data, id });
   }
@@ -52,7 +52,7 @@ class BudgetModel {
     const values: any[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'id' && key !== 'userId') {
+      if (value !== undefined && key !== 'id' && key !== 'user') {
         sets.push(`${key} = ?`);
         values.push(value);
       }

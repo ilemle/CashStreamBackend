@@ -10,7 +10,7 @@ export interface IGoal {
   userId: string;
   autoFill?: boolean;
   autoFillPercentage?: number;
-  created_at?: Date;
+  created_at?: Date; // Ensure userId and created_at are used
 }
 
 class GoalModel {

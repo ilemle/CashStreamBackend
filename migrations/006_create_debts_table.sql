@@ -12,13 +12,13 @@ CREATE TABLE IF NOT EXISTS debts (
   dueDate DATE NOT NULL COMMENT 'Дата возврата',
   isPaid BOOLEAN DEFAULT FALSE,
   paidDate DATE NULL,
-  user VARCHAR(36) NOT NULL,
+  userId VARCHAR(36) NOT NULL,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_user (user),
+  INDEX idx_user (userId),
   INDEX idx_isPaid (isPaid),
   INDEX idx_dueDate (dueDate),
   INDEX idx_type (type),
-  FOREIGN KEY (user) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
 );
 

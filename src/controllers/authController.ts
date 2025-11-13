@@ -969,46 +969,58 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
 
 // Получение URL Telegram бота для авторизации (с генерацией токена сессии)
 export const getTelegramBotUrl = async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
-  try {
-    const botUrl = await getBotUrl();
-    const username = await getBotUsername();
-    
-    if (!botUrl || !username) {
-      res.status(503).json({
-        success: false,
-        message: 'Telegram bot is not available'
-      });
-      return;
-    }
-    
-    // Генерируем уникальный токен сессии
-    const sessionToken = uuidv4();
-    
-    // Создаем сессию (действительна 10 минут)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
-    await TelegramAuthSession.create({
-      sessionToken,
-      telegramId: 0, // Будет обновлено ботом при нажатии кнопки
-      expiresAt
-    });
-    
-    // URL с токеном сессии
-    const botAppUrl = `tg://resolve?domain=${username}&start=auth_${sessionToken}`;
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        botUrl, // Для веб-версии
-        botAppUrl, // Для мобильного приложения (tg://)
-        sessionToken // Токен для проверки авторизации
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      const botUrl = await getBotUrl();
+      const username = await getBotUsername();
+      
+      if (!botUrl || !username) {
+        res.status(503).json({
+          success: false,
+          message: 'Telegram bot is not available'
+        });
+        return;
       }
-    });
-  } catch (err: any) {
-    console.error('❌ Get Telegram bot URL error:', err);
-    res.status(500).json({
-      success: false,
-      message: err.message || 'Failed to get Telegram bot URL'
-    });
+      
+      // Генерируем уникальный токен сессии
+      const sessionToken = uuidv4();
+      
+      // Создаем сессию (действительна 10 минут)
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
+      await TelegramAuthSession.create({
+        sessionToken,
+        telegramId: 0, // Будет обновлено ботом при нажатии кнопки
+        expiresAt
+      });
+      
+      // URL с токеном сессии
+      const botAppUrl = `tg://resolve?domain=${username}&start=auth_${sessionToken}`;
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          botUrl, // Для веб-версии
+          botAppUrl, // Для мобильного приложения (tg://)
+          sessionToken // Токен для проверки авторизации
+        }
+      });
+      return; // Успех, выходим из функции
+    } catch (err: any) {
+      console.error('❌ Get Telegram bot URL error:', err.message);
+      if (err.code === 'ECONNREFUSED' && retries > 1) {
+        retries--;
+        console.warn(`⚠️ Retrying Telegram bot connection in 5 seconds... (${retries} retries left)`);
+        await new Promise(resPromise => setTimeout(resPromise, 5000));
+      } else {
+        console.error('❌ All Telegram bot connection retries failed or other error occurred.');
+        res.status(500).json({
+          success: false,
+          message: err.message || 'Failed to get Telegram bot URL'
+        });
+        return;
+      }
+    }
   }
 };
 

@@ -11,7 +11,7 @@ export interface IDebt {
   dueDate: Date | string; // Дата возврата
   isPaid: boolean;
   paidDate?: Date | string;
-  user: string;
+  userId: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -26,9 +26,9 @@ class DebtModel {
     };
   }
 
-  static async find(filter: { user: string; isPaid?: boolean }): Promise<IDebt[]> {
-    let query = 'SELECT * FROM debts WHERE user = ?';
-    const params: any[] = [filter.user];
+  static async find(filter: { userId: string; isPaid?: boolean }): Promise<IDebt[]> {
+    let query = 'SELECT * FROM debts WHERE userId = ?';
+    const params: any[] = [filter.userId];
     
     if (filter.isPaid !== undefined) {
       query += ' AND isPaid = ?';
@@ -53,7 +53,7 @@ class DebtModel {
   static async create(data: IDebt): Promise<IDebt> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO debts (id, title, amount, currency, type, person, dueDate, isPaid, paidDate, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO debts (id, title, amount, currency, type, person, dueDate, isPaid, paidDate, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         id,
         data.title,
@@ -64,7 +64,7 @@ class DebtModel {
         data.dueDate,
         data.isPaid ? 1 : 0,
         data.paidDate || null,
-        data.user
+        data.userId
       ]
     );
     return this.transformDebt({ ...data, id });
@@ -75,7 +75,7 @@ class DebtModel {
     const values: any[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'id' && key !== 'user') {
+      if (value !== undefined && key !== 'id' && key !== 'userId') {
         if (key === 'isPaid') {
           sets.push(`${key} = ?`);
           values.push(value ? 1 : 0);
@@ -110,7 +110,7 @@ class DebtModel {
   static async findOverdue(userId: string): Promise<IDebt[]> {
     const [rows] = await pool.execute(
       `SELECT * FROM debts 
-       WHERE user = ? AND isPaid = 0 AND dueDate < CURDATE() 
+       WHERE userId = ? AND isPaid = 0 AND dueDate < CURDATE() 
        ORDER BY dueDate ASC`,
       [userId]
     );

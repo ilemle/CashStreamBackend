@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface IUser {
   id?: string;
-  name: string;
+  username: string;
   email?: string;
   phone?: string;
   telegramId?: number;
@@ -22,8 +22,8 @@ class UserModel {
     const hashedPassword = await bcrypt.hash(userData.password, salt);
 
     await pool.execute(
-      'INSERT INTO users (id, name, email, phone, telegramId, password) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, userData.name, userData.email || null, userData.phone || null, userData.telegramId || null, hashedPassword]
+      'INSERT INTO users (id, username, email, phone, telegramId, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, userData.username, userData.email || null, userData.phone || null, userData.telegramId || null, hashedPassword]
     );
 
     return { ...userData, id, password: hashedPassword };
@@ -53,7 +53,7 @@ class UserModel {
 
   static async findById(id: string): Promise<IUser | null> {
     const [rows] = await pool.execute(
-      'SELECT id, name, email, phone, telegramId, createdAt FROM users WHERE id = ?',
+      'SELECT id, username, email, phone, telegramId, createdAt FROM users WHERE id = ?',
       [id]
     );
     const users = rows as IUser[];
@@ -101,7 +101,7 @@ class UserModel {
     // MySQL2 не поддерживает параметры для LIMIT и OFFSET в prepared statements,
     // поэтому используем числа напрямую (значения уже валидированы и безопасны)
     const [rows] = await pool.execute(
-      `SELECT id, name, email, phone, telegramId, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
+      `SELECT id, username, email, phone, telegramId, createdAt FROM users ORDER BY createdAt DESC LIMIT ${validLimit} OFFSET ${offset}`
     );
     
     const users = rows as IUser[];

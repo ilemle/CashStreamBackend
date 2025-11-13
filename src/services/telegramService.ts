@@ -93,7 +93,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
               // Существующий пользователь - показываем кнопку "Подтвердить авторизацию"
               bot?.sendMessage(
                 chatId,
-                `👋 Привет, ${existingUser.name || firstName}!\n\nПодтвердите авторизацию в приложении CashStream:`,
+                `👋 Привет, ${existingUser.username || firstName}!\n\nПодтвердите авторизацию в приложении CashStream:`,
                 {
                   reply_markup: {
                     inline_keyboard: [
@@ -122,7 +122,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
             const randomPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16);
             
             const newUser = await User.create({
-              name,
+              username: name,
               telegramId: Number(telegramId),
               password: randomPassword
             } as any);
@@ -140,7 +140,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
               'UPDATE users SET lastTelegramActivity = NOW() WHERE id = ?',
               [existingUser.id]
             );
-            console.log(`✅ Пользователь уже существует: ${existingUser.name} (telegramId: ${telegramId}), обновлена активность`);
+            console.log(`✅ Пользователь уже существует: ${existingUser.username} (telegramId: ${telegramId}), обновлена активность`);
           }
           
           // Отправляем сообщение об успешной регистрации
@@ -202,7 +202,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
             );
             
             bot?.editMessageText(
-              `✅ Вы уже зарегистрированы, ${existingUser.name || query.from.first_name}!\n\nВернитесь в приложение CashStream для завершения авторизации.`,
+              `✅ Вы уже зарегистрированы, ${existingUser.username || query.from.first_name}!\n\nВернитесь в приложение CashStream для завершения авторизации.`,
               {
                 chat_id: chatId,
                 message_id: query.message?.message_id
@@ -222,7 +222,7 @@ export const initializeTelegramBot = (): TelegramBot | null => {
           const randomPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16);
           
           const newUser = await User.create({
-            name,
+            username: name,
             telegramId: Number(telegramId),
             password: randomPassword
           } as any);
@@ -289,14 +289,14 @@ export const initializeTelegramBot = (): TelegramBot | null => {
           });
           
           bot?.editMessageText(
-            `✅ Авторизация подтверждена!\n\nПривет, ${existingUser.name || query.from.first_name}!\n\nВернитесь в приложение CashStream.`,
+            `✅ Авторизация подтверждена!\n\nПривет, ${existingUser.username || query.from.first_name}!\n\nВернитесь в приложение CashStream.`,
             {
               chat_id: chatId,
               message_id: query.message?.message_id
             }
           );
           
-          console.log(`✅ Авторизация подтверждена через кнопку: ${existingUser.name} (telegramId: ${telegramId})`);
+          console.log(`✅ Авторизация подтверждена через кнопку: ${existingUser.username} (telegramId: ${telegramId})`);
         }
       } catch (error) {
         console.error('❌ Ошибка при обработке callback_query:', error);

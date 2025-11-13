@@ -8,7 +8,7 @@ export const getDebts = async (req: Request, res: Response, next: NextFunction) 
     const userId = (req as any).user.id;
     const { isPaid } = req.query;
 
-    const filter: any = { user: userId };
+    const filter: any = { userId: userId };
     if (isPaid !== undefined) {
       filter.isPaid = isPaid === 'true';
     }
@@ -40,7 +40,7 @@ export const getDebt = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    if (debt.user !== userId) {
+    if (debt.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -86,7 +86,7 @@ export const createDebt = async (req: Request, res: Response, next: NextFunction
       person,
       dueDate: new Date(dueDate),
       isPaid: false,
-      user: userId
+      userId: userId
     };
 
     const debt = await Debt.create(debtData);
@@ -117,7 +117,7 @@ export const updateDebt = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    if (debt.user !== userId) {
+    if (debt.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -159,7 +159,7 @@ export const deleteDebt = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    if (debt.user !== userId) {
+    if (debt.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -209,7 +209,7 @@ export const markDebtAsPaid = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    if (debt.user !== userId) {
+    if (debt.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'

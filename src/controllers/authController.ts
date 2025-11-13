@@ -664,13 +664,13 @@ export const deleteAccount = async (req: Request, res: Response, _next: NextFunc
     // Это нужно сделать ДО удаления пользователя из-за внешних ключей
     console.log('🗑️ Deleting user related data...');
     try {
-      await pool.execute('DELETE FROM operations WHERE user = ?', [userId]);
+      await pool.execute('DELETE FROM operations WHERE userId = ?', [userId]);
       console.log('✅ Operations deleted');
       
-      await pool.execute('DELETE FROM budgets WHERE user = ?', [userId]);
+      await pool.execute('DELETE FROM budgets WHERE userId = ?', [userId]);
       console.log('✅ Budgets deleted');
       
-      await pool.execute('DELETE FROM goals WHERE user = ?', [userId]);
+      await pool.execute('DELETE FROM goals WHERE userId = ?', [userId]);
       console.log('✅ Goals deleted');
       
       await pool.execute('DELETE FROM email_verifications WHERE email = ?', [user.email]);

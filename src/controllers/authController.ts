@@ -1208,7 +1208,7 @@ export const loginWithTelegram = async (req: Request, res: Response, _next: Next
       userName: user.username,
       telegramId: user.telegramId,
       tokenGenerated: true,
-      isNewUser: !user.createdAt || (Date.now() - new Date(user.createdAt).getTime()) < 5000
+      isNewUser: !user.created_at || (Date.now() - new Date(user.created_at).getTime()) < 5000
     });
     console.log(`⏱️ Общее время обработки запроса: ${totalTime}ms`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

@@ -52,10 +52,10 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         phone: user.phone || null,
         telegramId: user.telegramId || null,
         telegramUsername: telegramUsername,
-        createdAt: user.createdAt 
-          ? (user.createdAt instanceof Date 
-            ? user.createdAt.toISOString() 
-            : new Date(user.createdAt).toISOString())
+        created_at: user.created_at 
+          ? (user.created_at instanceof Date 
+            ? user.created_at.toISOString() 
+            : new Date(user.created_at).toISOString())
           : null
       };
     }));

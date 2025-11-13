@@ -15,8 +15,8 @@ export interface IOperation {
   fromAccount?: string;
   toAccount?: string;
   currency?: string;  // Валюта операции (RUB, USD, EUR и т.д.)
-  user: string;
-  createdAt?: Date;
+  userId: string;
+  created_at?: Date;
 }
 
 class OperationModel {
@@ -34,8 +34,8 @@ class OperationModel {
       throw new Error('Database pool is not initialized');
     }
 
-    let query = 'SELECT * FROM operations WHERE user = ?';
-    const params: any[] = [filter.user];
+    let query = 'SELECT * FROM operations WHERE userId = ?';
+    const params: any[] = [filter.userId];
     
     // Добавляем фильтрацию по датам, если они переданы
     if (filter.date) {
@@ -70,8 +70,8 @@ class OperationModel {
       throw new Error('Database pool is not initialized');
     }
 
-    let query = 'SELECT COUNT(*) as count FROM operations WHERE user = ?';
-    const params: any[] = [filter.user];
+    let query = 'SELECT COUNT(*) as count FROM operations WHERE userId = ?';
+    const params: any[] = [filter.userId];
     
     // Добавляем фильтрацию по датам, если они переданы
     if (filter.date) {
@@ -101,8 +101,8 @@ class OperationModel {
   static async create(data: IOperation): Promise<IOperation> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.user]
+      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.userId]
     );
     return this.transformOperation({ ...data, id });
   }
@@ -112,7 +112,7 @@ class OperationModel {
     const values: any[] = [];
 
     // Поля, которые нельзя обновлять (вычисляемые или системные)
-    const excludedFields = ['id', 'user', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType'];
+    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType'];
 
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && !excludedFields.includes(key)) {
@@ -153,7 +153,7 @@ class OperationModel {
       for (const data of operations) {
         const id = uuidv4();
         await connection.execute(
-          'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             id,
             data.title,
@@ -167,7 +167,7 @@ class OperationModel {
             data.fromAccount || null,
             data.toAccount || null,
             data.currency || 'RUB',
-            data.user
+            data.userId
           ]
         );
         createdOperations.push(this.transformOperation({ ...data, id }));

@@ -25,11 +25,11 @@ const generateVerificationCode = (): string => {
 export const sendVerificationCode = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
     console.log('📨 Received send verification code request');
-    const { name, email, password } = req.body;
-    console.log('📨 Request data:', { name, email, password: password ? '***' : 'missing' });
+    const { username, email, password } = req.body;
+    console.log('📨 Request data:', { username, email, password: password ? '***' : 'missing' });
 
     // Валидация
-    if (!name || !email || !password) {
+    if (!username || !email || !password) {
       console.log('❌ Validation failed: missing fields');
       res.status(400).json({
         success: false,
@@ -68,7 +68,7 @@ export const sendVerificationCode = async (req: Request, res: Response, _next: N
 
     // Отправляем email с кодом (не блокируем ответ, если email не отправится)
     console.log('📧 Attempting to send email...');
-    sendVerificationEmail(email, code, name)
+    sendVerificationEmail(email, code, username)
       .then(() => {
         console.log('✅ Email sent successfully');
       })
@@ -111,16 +111,16 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
     console.log('📧 [VERIFY EMAIL & REGISTER] Запрос на подтверждение email и регистрацию');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const { email, code, name, password } = req.body;
+    const { email, code, username, password } = req.body;
     
     console.log('📋 Входные данные:', {
       email: email || 'не указано',
       code: code || 'не указано',
-      name: name || 'не указано',
+      username: username || 'не указано',
       password: password ? '***' : 'не указано'
     });
 
-    if (!email || !code || !name || !password) {
+    if (!email || !code || !username || !password) {
       console.log('❌ Валидация не пройдена: отсутствуют обязательные поля');
       res.status(400).json({
         success: false,
@@ -189,13 +189,13 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
 
     console.log('✅ Пользователь не существует, создаем нового...');
     const createStartTime = Date.now();
-    const user = await User.create({ name, email, password } as IUser);
+    const user = await User.create({ username, email, password } as IUser);
     const createTime = Date.now() - createStartTime;
     console.log(`⏱️ Пользователь создан за ${createTime}ms`);
     
     console.log('✅ Пользователь создан:', {
       id: user.id,
-      name: user.name,
+      username: user.username,
       email: user.email
     });
 
@@ -212,7 +212,7 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
     const totalTime = Date.now() - requestStartTime;
     console.log('📊 Результат регистрации:', {
       userId: user.id,
-      userName: user.name,
+      userName: user.username,
       userEmail: user.email,
       tokenGenerated: true
     });
@@ -223,7 +223,7 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
 
     res.status(201).json({
       success: true,
-      data: { user: { id: user.id, name: user.name, email: user.email }, token }
+      data: { user: { id: user.id, username: user.username, email: user.email }, token }
     });
     return;
   } catch (err: any) {
@@ -281,7 +281,7 @@ export const login = async (req: Request, res: Response, _next: NextFunction): P
 
     console.log('✅ Пользователь найден:', {
       id: user.id,
-      name: user.name,
+      username: user.username,
       email: user.email,
       phone: user.phone
     });
@@ -311,7 +311,7 @@ export const login = async (req: Request, res: Response, _next: NextFunction): P
     const totalTime = Date.now() - requestStartTime;
     console.log('📊 Результат авторизации:', {
       userId: user.id,
-      userName: user.name,
+      userName: user.username,
       userEmail: user.email,
       userPhone: user.phone,
       tokenGenerated: true
@@ -323,7 +323,7 @@ export const login = async (req: Request, res: Response, _next: NextFunction): P
 
     res.status(200).json({
       success: true,
-      data: { user: { id: user.id, name: user.name, email: user.email, phone: user.phone }, token }
+      data: { user: { id: user.id, username: user.username, email: user.email, phone: user.phone }, token }
     });
     return;
   } catch (err: any) {
@@ -396,7 +396,7 @@ export const requestPasswordReset = async (req: Request, res: Response, _next: N
 
     // Отправляем email с кодом (не блокируем ответ)
     console.log('📧 Attempting to send password reset email...');
-    sendPasswordResetEmail(email, code, user.name)
+    sendPasswordResetEmail(email, code, user.username)
       .then(() => {
         console.log('✅ Password reset email sent successfully');
       })
@@ -825,16 +825,16 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
     console.log('📱 [VERIFY PHONE & REGISTER] Запрос на подтверждение телефона и регистрацию');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const { phone, code, name, password } = req.body;
+    const { phone, code, username, password } = req.body;
     
     console.log('📋 Входные данные:', {
       phone: phone || 'не указано',
       code: code || 'не указано',
-      name: name || 'не указано',
+      username: username || 'не указано',
       password: password ? '***' : 'не указано'
     });
 
-    if (!phone || !code || !name || !password) {
+    if (!phone || !code || !username || !password) {
       console.log('❌ Валидация не пройдена: отсутствуют обязательные поля');
       res.status(400).json({
         success: false,
@@ -913,13 +913,13 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
 
     console.log('✅ Пользователь не существует, создаем нового...');
     const createStartTime = Date.now();
-    const user = await User.create({ name, phone: normalizedPhone, password } as IUser);
+    const user = await User.create({ username, phone: normalizedPhone, password } as IUser);
     const createTime = Date.now() - createStartTime;
     console.log(`⏱️ Пользователь создан за ${createTime}ms`);
     
     console.log('✅ Пользователь создан:', {
       id: user.id,
-      name: user.name,
+      username: user.username,
       phone: user.phone
     });
 
@@ -936,7 +936,7 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
     const totalTime = Date.now() - requestStartTime;
     console.log('📊 Результат регистрации:', {
       userId: user.id,
-      userName: user.name,
+      userName: user.username,
       userPhone: user.phone,
       tokenGenerated: true
     });
@@ -947,7 +947,7 @@ export const verifyPhoneAndRegister = async (req: Request, res: Response, _next:
 
     res.status(201).json({
       success: true,
-      data: { user: { id: user.id, name: user.name, phone: user.phone }, token }
+      data: { user: { id: user.id, username: user.username, phone: user.phone }, token }
     });
     return;
   } catch (err: any) {
@@ -1073,12 +1073,12 @@ export const checkTelegramAuth = async (req: Request, res: Response, _next: Next
         : (userInfo.username || 'Telegram User');
       
       // Обновляем имя, если оно изменилось
-      if (user.name !== name) {
+      if (user.username !== name) {
         await pool.execute(
-          'UPDATE users SET name = ? WHERE id = ?',
+          'UPDATE users SET username = ? WHERE id = ?',
           [name, user.id]
         );
-        user.name = name;
+        user.username = name;
       }
     }
     
@@ -1093,7 +1093,7 @@ export const checkTelegramAuth = async (req: Request, res: Response, _next: Next
       data: {
         user: {
           id: user.id,
-          name: user.name,
+          username: user.username,
           email: user.email,
           phone: user.phone,
           telegramId: user.telegramId
@@ -1165,7 +1165,7 @@ export const loginWithTelegram = async (req: Request, res: Response, _next: Next
       const randomPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16);
       
       user = await User.create({
-        name,
+        username: name,
         telegramId: Number(telegramId),
         password: randomPassword
       } as IUser);
@@ -1175,24 +1175,24 @@ export const loginWithTelegram = async (req: Request, res: Response, _next: Next
       
       console.log('✅ Пользователь создан:', {
         id: user.id,
-        name: user.name,
+        username: user.username,
         telegramId: user.telegramId
       });
     } else {
       console.log('✅ Пользователь найден:', {
         id: user.id,
-        name: user.name,
+        username: user.username,
         telegramId: user.telegramId
       });
       
       // Обновляем имя, если оно изменилось
-      if (user.name !== name) {
+      if (user.username !== name) {
         console.log('🔄 Обновляем имя пользователя...');
         await pool.execute(
-          'UPDATE users SET name = ? WHERE id = ?',
+          'UPDATE users SET username = ? WHERE id = ?',
           [name, user.id]
         );
-        user.name = name;
+        user.username = name;
       }
     }
 
@@ -1205,7 +1205,7 @@ export const loginWithTelegram = async (req: Request, res: Response, _next: Next
     const totalTime = Date.now() - requestStartTime;
     console.log('📊 Результат авторизации через Telegram:', {
       userId: user.id,
-      userName: user.name,
+      userName: user.username,
       telegramId: user.telegramId,
       tokenGenerated: true,
       isNewUser: !user.createdAt || (Date.now() - new Date(user.createdAt).getTime()) < 5000
@@ -1220,7 +1220,7 @@ export const loginWithTelegram = async (req: Request, res: Response, _next: Next
       data: { 
         user: { 
           id: user.id, 
-          name: user.name, 
+          username: user.username, 
           email: user.email, 
           phone: user.phone,
           telegramId: user.telegramId

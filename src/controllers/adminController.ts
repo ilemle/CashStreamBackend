@@ -47,7 +47,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       
       return {
         id: user.id,
-        name: user.name,
+        username: user.username,
         email: user.email || null,
         phone: user.phone || null,
         telegramId: user.telegramId || null,

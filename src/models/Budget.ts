@@ -8,7 +8,7 @@ export interface IBudget {
   budget: number;
   color: string;
   userId: string;
-  created_at?: Date; // Ensure userId and created_at are used
+  created_at?: Date;
 }
 
 class BudgetModel {

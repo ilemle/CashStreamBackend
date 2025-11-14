@@ -133,7 +133,12 @@ class OperationModel {
       [id, data.title, data.amount, data.categoryId || null, data.subcategoryId || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.userId]
     );
     // Получаем созданную операцию с JOIN для названий категорий
-    return this.findById(id) || this.transformOperation({ ...data, id });
+    const created = await this.findById(id);
+    if (created) {
+      return created;
+    }
+    // Fallback если не удалось получить с JOIN
+    return this.transformOperation({ ...data, id });
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<IOperation>): Promise<IOperation | null> {

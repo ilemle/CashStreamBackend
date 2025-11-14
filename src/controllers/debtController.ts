@@ -15,8 +15,7 @@ const createOperationFromDebt = (debt: IDebt, userId: string): IOperation => {
     return {
       title: `${title} - ${person}`,
       amount: -Math.abs(amount), // Отрицательная сумма для расхода
-      category: 'Дал в долг',
-      categoryKey: 'categories.lent_money',
+      categoryId: null, // Категория для долгов не привязана к конкретной категории
       type: 'expense',
       currency: currency || 'RUB',
       date: new Date(),
@@ -28,8 +27,7 @@ const createOperationFromDebt = (debt: IDebt, userId: string): IOperation => {
     return {
       title: `${title} - ${person}`,
       amount: Math.abs(amount), // Положительная сумма для дохода
-      category: 'Взял в долг',
-      categoryKey: 'categories.borrowed_money',
+      categoryId: null, // Категория для долгов не привязана к конкретной категории
       type: 'income',
       currency: currency || 'RUB',
       date: new Date(),
@@ -50,8 +48,7 @@ const createOperationFromDebtReturn = (debt: IDebt, userId: string): IOperation 
     return {
       title: `Возврат долга: ${title}`,
       amount: Math.abs(amount), // Положительная сумма для дохода
-      category: 'Возврат долга',
-      categoryKey: 'categories.debt_return',
+      categoryId: null, // Категория для долгов не привязана к конкретной категории
       type: 'income',
       currency: currency || 'RUB',
       date: new Date(),
@@ -63,8 +60,7 @@ const createOperationFromDebtReturn = (debt: IDebt, userId: string): IOperation 
     return {
       title: `Возврат долга: ${title}`,
       amount: -Math.abs(amount), // Отрицательная сумма для расхода
-      category: 'Возврат долга',
-      categoryKey: 'categories.debt_return',
+      categoryId: null, // Категория для долгов не привязана к конкретной категории
       type: 'expense',
       currency: currency || 'RUB',
       date: new Date(),

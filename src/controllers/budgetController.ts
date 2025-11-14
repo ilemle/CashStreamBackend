@@ -13,6 +13,9 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    console.log('📊 Creating budget - raw request body:', req.body);
+    console.log('📊 User from token:', req.user);
+
     // Преобразуем undefined в null для SQL
     const rawData = req.body;
     const budgetData: CreateBudgetRequest & { userId: string } = {
@@ -23,6 +26,8 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
       color: rawData.color || '',
       userId: req.user?.id || ''
     };
+
+    console.log('📊 Processed budget data:', budgetData);
 
     // Валидация обязательных полей
     if (!budgetData.categoryId || !budgetData.category || !budgetData.budget || !budgetData.color) {

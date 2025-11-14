@@ -1,20 +1,10 @@
 import { pool } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
-
-export interface IBudget {
-  id?: string;
-  categoryId: string; // ID категории
-  category: string; // Название категории (кэш для быстрого доступа)
-  spent: number;
-  budget: number;
-  color: string;
-  userId: string;
-  created_at?: Date;
-}
+import { BudgetDTO, CreateBudgetRequest, UpdateBudgetRequest } from '../types/database';
 
 class BudgetModel {
   // Вспомогательная функция для преобразования DECIMAL строк в числа
-  private static transformBudget(budget: any): IBudget {
+  private static transformBudget(budget: any): BudgetDTO {
     return {
       ...budget,
       spent: Number(budget.spent),
@@ -22,7 +12,7 @@ class BudgetModel {
     };
   }
 
-  static async find(filter: { userId: string }): Promise<IBudget[]> {
+  static async find(filter: { userId: string }): Promise<BudgetDTO[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE userId = ?',
       [filter.userId]
@@ -30,7 +20,7 @@ class BudgetModel {
     return (rows as any[]).map(this.transformBudget);
   }
 
-  static async findById(id: string): Promise<IBudget | null> {
+  static async findById(id: string): Promise<BudgetDTO | null> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE id = ?',
       [id]
@@ -39,7 +29,7 @@ class BudgetModel {
     return budgets[0] ? this.transformBudget(budgets[0]) : null;
   }
 
-  static async create(data: IBudget): Promise<IBudget> {
+  static async create(data: CreateBudgetRequest & { userId: string }): Promise<BudgetDTO> {
     const id = uuidv4();
     await pool.execute(
       'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -48,7 +38,7 @@ class BudgetModel {
     return this.transformBudget({ ...data, id });
   }
 
-  static async findByIdAndUpdate(id: string, data: Partial<IBudget>): Promise<IBudget | null> {
+  static async findByIdAndUpdate(id: string, data: UpdateBudgetRequest): Promise<BudgetDTO | null> {
     const sets: string[] = [];
     const values: any[] = [];
 

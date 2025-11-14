@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import Operation, { IOperation } from '../models/Operation';
+import Operation from '../models/Operation';
 import Budget from '../models/Budget';
 import Goal from '../models/Goal';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
+import { CreateOperationRequest } from '../types/database';
 
 // Вспомогательная функция для обновления бюджета
 async function updateBudgetSpent(userId: string, categoryId: string | null, amount: number, operation: 'add' | 'subtract') {
@@ -261,7 +262,7 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
 export const createOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
-    const opData: IOperation = {
+    const opData: CreateOperationRequest & { userId: string } = {
       title: req.body.title,
       amount: req.body.amount,
       categoryId: req.body.categoryId !== undefined ? req.body.categoryId : null,
@@ -381,7 +382,7 @@ export const getBalance = async (req: Request, res: Response) => {
   try {
     const ops = await Operation.find({ userId: req.user?.id || '' });
     const balance = ops.reduce((sum, op) => sum + Number(op.amount), 0);
-    const balanceWithConversion = await addCurrencyConversion({ amount: balance } as IOperation, req);
+    const balanceWithConversion = await addCurrencyConversion({ amount: balance, currency: 'RUB' }, req);
     
     res.status(200).json({ 
       success: true, 
@@ -425,7 +426,7 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     console.log(`📦 Creating batch of ${operations.length} operations for userId: ${req.user?.id}`);
 
     // Подготавливаем данные для создания
-    const operationsData: IOperation[] = operations.map((op: any) => ({
+    const operationsData: (CreateOperationRequest & { userId: string })[] = operations.map((op: any) => ({
       title: op.title,
       amount: op.amount,
       categoryId: op.categoryId || null,

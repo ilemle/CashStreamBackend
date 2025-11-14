@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import Debt, { IDebt } from '../models/Debt';
-import Operation, { IOperation } from '../models/Operation';
+import Operation from '../models/Operation';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
+import { CreateOperationRequest } from '../types/database';
 
 /**
  * Создает операцию при создании долга
  */
-const createOperationFromDebt = (debt: IDebt, userId: string): IOperation => {
+const createOperationFromDebt = (debt: IDebt, userId: string): CreateOperationRequest & { userId: string } => {
   const { title, amount, currency, type, person } = debt;
   
   if (type === 'lent') {
@@ -39,7 +40,7 @@ const createOperationFromDebt = (debt: IDebt, userId: string): IOperation => {
 /**
  * Создает операцию при возврате долга
  */
-const createOperationFromDebtReturn = (debt: IDebt, userId: string): IOperation => {
+const createOperationFromDebtReturn = (debt: IDebt, userId: string): CreateOperationRequest & { userId: string } => {
   const { title, amount, currency, type } = debt;
   
   if (type === 'lent') {

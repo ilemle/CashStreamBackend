@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import Budget, { IBudget } from '../models/Budget';
+import Budget from '../models/Budget';
+import { CreateBudgetRequest } from '../types/database';
 
 export const getBudgets = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -12,8 +13,12 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const budgetData = { ...req.body, userId: req.user?.id || '' };
-    const budget = await Budget.create(budgetData as IBudget);
+    const budgetData: CreateBudgetRequest & { userId: string } = {
+      ...req.body,
+      userId: req.user?.id || '',
+      spent: req.body.spent || 0
+    };
+    const budget = await Budget.create(budgetData);
     res.status(201).json({ success: true, data: budget });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });

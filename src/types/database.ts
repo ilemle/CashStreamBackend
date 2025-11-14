@@ -32,7 +32,6 @@ export interface OperationTable {
   currency: string; // VARCHAR(10) DEFAULT 'RUB'
   categoryId: string | null; // VARCHAR(36) NULL, FK → categories.id
   subcategoryId: string | null; // VARCHAR(36) NULL, FK → subcategories.id
-  description: string | null; // VARCHAR(255) NULL (legacy, можно удалить)
   fromAccount: string | null; // VARCHAR(255) NULL (для переводов)
   toAccount: string | null; // VARCHAR(255) NULL (для переводов)
   date: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -163,6 +162,61 @@ export interface TelegramAuthSessionTable {
   createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   expiresAt: Date; // TIMESTAMP NOT NULL
   used: boolean; // BOOLEAN DEFAULT FALSE
+}
+
+// ============================================================================
+// API и DTO типы (для запросов/ответов API)
+// ============================================================================
+
+// Операция с дополнительными полями для API (названия категорий)
+export interface OperationDTO extends OperationTable {
+  // Вычисляемые поля (получаются через JOIN)
+  categoryName?: string;
+  subcategoryName?: string;
+  category?: string; // Полный путь "Категория > Подкатегория"
+
+  // Конвертированная валюта (добавляется на уровне API)
+  convertedAmount?: number;
+  convertedCurrency?: string;
+  convertedCurrencyCode?: string;
+}
+
+// Запрос на создание операции
+export interface CreateOperationRequest {
+  title: string;
+  amount: number;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  date?: Date | string;
+  timestamp?: number;
+  type: OperationType;
+  fromAccount?: string;
+  toAccount?: string;
+  currency?: string;
+}
+
+// Запрос на обновление операции
+export interface UpdateOperationRequest extends Partial<CreateOperationRequest> {
+  // Все поля опциональны для обновления
+}
+
+// Бюджет с дополнительными полями для API
+export interface BudgetDTO extends BudgetTable {
+  // Можно добавить дополнительные поля если нужно
+}
+
+// Запрос на создание бюджета
+export interface CreateBudgetRequest {
+  categoryId: string;
+  category: string;
+  spent?: number;
+  budget: number;
+  color: string;
+}
+
+// Запрос на обновление бюджета
+export interface UpdateBudgetRequest extends Partial<CreateBudgetRequest> {
+  // Все поля опциональны для обновления
 }
 
 // ============================================================================

@@ -11,7 +11,8 @@ const connectDB = async (): Promise<void> => {
       database: process.env.DB_NAME || 'cashstream',
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      charset: 'utf8mb4' // Правильная кодировка для поддержки всех Unicode символов
     });
 
     // Тест подключения

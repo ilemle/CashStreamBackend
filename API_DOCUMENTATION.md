@@ -42,16 +42,21 @@ Authorization: Bearer <token>
 interface OperationDTO {
   id: string;
   title: string;
-  titleKey?: string;
   amount: number;
-  category: string;
-  categoryKey?: string;
-  date: string; // ISO 8601
+  categoryId?: string | null;        // ID категории
+  subcategoryId?: string | null;     // ID подкатегории
+  categoryName?: string;              // Название категории (из JOIN)
+  subcategoryName?: string;           // Название подкатегории (из JOIN)
+  category?: string;                  // Полный путь "Категория > Подкатегория" (вычисляемое)
+  date: string;                       // ISO 8601
   timestamp?: number;
   type: 'income' | 'expense' | 'transfer';
   currency?: string;
   fromAccount?: string;
   toAccount?: string;
+  userId?: string;
+  created_at?: string;
+  // Конвертированная валюта (добавляется middleware)
   convertedAmount?: number;
   convertedCurrency?: string;
   convertedCurrencyCode?: string;
@@ -67,17 +72,53 @@ interface OperationDTO {
 **Request Body**:
 ```typescript
 {
-  title: string;
-  titleKey?: string;
-  amount: number;
-  category: string;
-  categoryKey?: string;
-  date?: string; // ISO 8601, по умолчанию текущая дата
-  timestamp?: number;
-  type: 'income' | 'expense' | 'transfer';
-  currency?: string; // по умолчанию 'RUB'
-  fromAccount?: string; // для type='transfer'
-  toAccount?: string; // для type='transfer'
+  title: string;                    // Обязательно: название операции
+  amount: number;                   // Обязательно: сумма операции
+  type: 'income' | 'expense' | 'transfer'; // Обязательно: тип операции
+  categoryId?: string | null;        // Опционально: ID категории (UUID)
+  subcategoryId?: string | null;     // Опционально: ID подкатегории (UUID)
+  date?: string;                     // Опционально: дата в формате ISO 8601 (по умолчанию текущая)
+  timestamp?: number;                // Опционально: Unix timestamp
+  currency?: string;                 // Опционально: валюта (по умолчанию 'RUB')
+  fromAccount?: string;              // Опционально: счет-источник (для type='transfer')
+  toAccount?: string;                // Опционально: счет-получатель (для type='transfer')
+}
+```
+
+**Примеры запросов**:
+
+Расход:
+```json
+{
+  "title": "Покупка продуктов",
+  "amount": -1500,
+  "type": "expense",
+  "categoryId": "food",
+  "subcategoryId": "groceries",
+  "currency": "RUB"
+}
+```
+
+Доход:
+```json
+{
+  "title": "Зарплата",
+  "amount": 50000,
+  "type": "income",
+  "categoryId": "salary",
+  "currency": "RUB"
+}
+```
+
+Перевод:
+```json
+{
+  "title": "Перевод между счетами",
+  "amount": 10000,
+  "type": "transfer",
+  "fromAccount": "Счет 1",
+  "toAccount": "Счет 2",
+  "currency": "RUB"
 }
 ```
 

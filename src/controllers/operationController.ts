@@ -331,8 +331,16 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
       console.log(`⚠️ Operation type changed from income to ${newType}, goals were auto-filled and cannot be automatically reverted`);
     }
     
+    // Преобразуем undefined в null для SQL
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).map(([key, value]) => [
+        key,
+        value === undefined ? null : value
+      ])
+    );
+
     // Обновляем операцию
-    const op = await Operation.findByIdAndUpdate(req.params.id, req.body, language);
+    const op = await Operation.findByIdAndUpdate(req.params.id, updateData, language);
     
     // Добавляем новую операцию в бюджет (если расход)
     if (newType === 'expense' && newCategoryId && existingOp.userId) {

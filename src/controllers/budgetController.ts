@@ -13,15 +13,31 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    // Преобразуем undefined в null для SQL
+    const rawData = req.body;
     const budgetData: CreateBudgetRequest & { userId: string } = {
-      ...req.body,
-      userId: req.user?.id || '',
-      spent: req.body.spent || 0
+      categoryId: rawData.categoryId || '',
+      category: rawData.category || '',
+      spent: rawData.spent ?? 0,
+      budget: rawData.budget || 0,
+      color: rawData.color || '',
+      userId: req.user?.id || ''
     };
+
+    // Валидация обязательных полей
+    if (!budgetData.categoryId || !budgetData.category || !budgetData.budget || !budgetData.color) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: categoryId, category, budget, color'
+      });
+    }
+
     const budget = await Budget.create(budgetData);
     res.status(201).json({ success: true, data: budget });
+    return;
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
+    return;
   }
 };
 
@@ -32,13 +48,21 @@ export const updateBudget = async (req: Request, res: Response, _next: NextFunct
       res.status(404).json({ success: false, message: 'Budget not found' });
       return;
     }
-    
+
     if (existingBudget.userId !== req.user?.id) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
-    
-    const budget = await Budget.findByIdAndUpdate(req.params.id, req.body);
+
+    // Преобразуем undefined в null для SQL
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).map(([key, value]) => [
+        key,
+        value === undefined ? null : value
+      ])
+    );
+
+    const budget = await Budget.findByIdAndUpdate(req.params.id, updateData);
     res.status(200).json({ success: true, data: budget });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -62,5 +86,6 @@ export const deleteBudget = async (req: Request, res: Response, _next: NextFunct
     res.status(200).json({ success: true, data: {} });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
+    return;
   }
 };

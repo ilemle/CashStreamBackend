@@ -149,7 +149,7 @@ async function generateOperations(userId, count = 50, daysBack = 90) {
 
     // Проверяем существование пользователя
     const [userRows] = await connection.execute(
-      'SELECT id, name, email FROM users WHERE id = ?',
+      'SELECT id, username, email FROM users WHERE id = ?',
       [userId]
     );
 
@@ -161,8 +161,8 @@ async function generateOperations(userId, count = 50, daysBack = 90) {
     const user = userRows[0];
     console.log(`📋 Генерация операций для пользователя:`);
     console.log(`   ID: ${user.id}`);
-    console.log(`   Имя: ${user.name}`);
-    console.log(`   Email: ${user.email}`);
+    console.log(`   Username: ${user.username}`);
+    console.log(`   Email: ${user.email || 'не указан'}`);
     console.log(`   Количество операций: ${count}`);
     console.log(`   Период: последние ${daysBack} дней\n`);
 

@@ -1,6 +1,77 @@
 import { Request, Response, NextFunction } from 'express';
 import Debt, { IDebt } from '../models/Debt';
+import Operation, { IOperation } from '../models/Operation';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
+
+/**
+ * Создает операцию при создании долга
+ */
+const createOperationFromDebt = (debt: IDebt, userId: string): IOperation => {
+  const { title, amount, currency, type, person } = debt;
+  
+  if (type === 'lent') {
+    // Дал в долг - операция расхода
+    // Название: название долга + кому одолжил
+    return {
+      title: `${title} - ${person}`,
+      amount: -Math.abs(amount), // Отрицательная сумма для расхода
+      category: 'Дал в долг',
+      categoryKey: 'categories.lent_money',
+      type: 'expense',
+      currency: currency || 'RUB',
+      date: new Date(),
+      userId: userId,
+    };
+  } else {
+    // Взял в долг - операция дохода
+    // Название: название долга + у кого взял
+    return {
+      title: `${title} - ${person}`,
+      amount: Math.abs(amount), // Положительная сумма для дохода
+      category: 'Взял в долг',
+      categoryKey: 'categories.borrowed_money',
+      type: 'income',
+      currency: currency || 'RUB',
+      date: new Date(),
+      userId: userId,
+    };
+  }
+};
+
+/**
+ * Создает операцию при возврате долга
+ */
+const createOperationFromDebtReturn = (debt: IDebt, userId: string): IOperation => {
+  const { title, amount, currency, type } = debt;
+  
+  if (type === 'lent') {
+    // Возвращают мне (я дал в долг) - операция дохода
+    // Название: "Возврат долга" + название долга
+    return {
+      title: `Возврат долга: ${title}`,
+      amount: Math.abs(amount), // Положительная сумма для дохода
+      category: 'Возврат долга',
+      categoryKey: 'categories.debt_return',
+      type: 'income',
+      currency: currency || 'RUB',
+      date: new Date(),
+      userId: userId,
+    };
+  } else {
+    // Я возвращаю (я взял в долг) - операция расхода
+    // Название: "Возврат долга" + название долга
+    return {
+      title: `Возврат долга: ${title}`,
+      amount: -Math.abs(amount), // Отрицательная сумма для расхода
+      category: 'Возврат долга',
+      categoryKey: 'categories.debt_return',
+      type: 'expense',
+      currency: currency || 'RUB',
+      date: new Date(),
+      userId: userId,
+    };
+  }
+};
 
 // Получить все долги пользователя
 export const getDebts = async (req: Request, res: Response, next: NextFunction) => {
@@ -90,6 +161,17 @@ export const createDebt = async (req: Request, res: Response, next: NextFunction
     };
 
     const debt = await Debt.create(debtData);
+    
+    // Автоматически создаем операцию при создании долга
+    try {
+      const operation = createOperationFromDebt(debt, userId);
+      await Operation.create(operation);
+      console.log('✅ Operation created from debt:', operation);
+    } catch (error: any) {
+      console.error('❌ Error creating operation from debt:', error);
+      // Не блокируем создание долга, если операция не создалась
+    }
+    
     const debtWithConversion = await addCurrencyConversion(debt, req);
 
     return res.status(201).json({
@@ -216,10 +298,23 @@ export const markDebtAsPaid = async (req: Request, res: Response, next: NextFunc
       });
     }
 
+    // Сохраняем оригинальный долг для создания операции
+    const originalDebt = debt;
+    
     const updatedDebt = await Debt.findByIdAndUpdate(id, {
       isPaid: true,
       paidDate: new Date()
     });
+
+    // Автоматически создаем операцию при возврате долга
+    try {
+      const operation = createOperationFromDebtReturn(originalDebt, userId);
+      await Operation.create(operation);
+      console.log('✅ Operation created from debt return:', operation);
+    } catch (error: any) {
+      console.error('❌ Error creating operation from debt return:', error);
+      // Не блокируем возврат долга, если операция не создалась
+    }
 
     const debtWithConversion = await addCurrencyConversion(updatedDebt!, req);
 

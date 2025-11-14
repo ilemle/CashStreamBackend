@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface IBudget {
   id?: string;
-  category: string;
+  categoryId: string; // ID категории
+  category: string; // Название категории (кэш для быстрого доступа)
   spent: number;
   budget: number;
   color: string;
@@ -41,8 +42,8 @@ class BudgetModel {
   static async create(data: IBudget): Promise<IBudget> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO budgets (id, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, data.category, data.spent, data.budget, data.color, data.userId]
+      'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
     );
     return this.transformBudget({ ...data, id });
   }

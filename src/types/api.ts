@@ -38,10 +38,14 @@ export interface PaginatedResponse<T> {
 export interface OperationDTO {
   id: string;
   title: string;
-  titleKey?: string;
   amount: number;
-  category: string;
-  categoryKey?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  // Названия категорий (получаются через JOIN)
+  categoryName?: string;
+  subcategoryName?: string;
+  // Полный путь категории для обратной совместимости
+  category?: string; // "Категория > Подкатегория"
   date: string; // ISO 8601
   timestamp?: number;
   type: OperationType;
@@ -58,10 +62,9 @@ export interface OperationDTO {
 
 export interface CreateOperationRequest {
   title: string;
-  titleKey?: string;
   amount: number;
-  category: string;
-  categoryKey?: string;
+  categoryId?: string | null; // ID категории
+  subcategoryId?: string | null; // ID подкатегории (опционально)
   date?: string; // ISO 8601, по умолчанию текущая дата
   timestamp?: number;
   type: OperationType;
@@ -72,10 +75,9 @@ export interface CreateOperationRequest {
 
 export interface UpdateOperationRequest {
   title?: string;
-  titleKey?: string;
   amount?: number;
-  category?: string;
-  categoryKey?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
   date?: string;
   timestamp?: number;
   type?: OperationType;
@@ -101,7 +103,7 @@ export interface CreateOperationResponse extends ApiResponse<OperationDTO> {}
 export interface UpdateOperationResponse extends ApiResponse<OperationDTO> {}
 
 export interface CreateOperationsBatchRequest {
-  operations: CreateOperationRequest[];
+  operations: CreateOperationRequest[]; // Каждая операция должна иметь categoryId
 }
 
 export interface CreateOperationsBatchResponse extends ApiResponse<OperationDTO[]> {}

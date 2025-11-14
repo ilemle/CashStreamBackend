@@ -11,10 +11,9 @@ import { OperationType, DebtType } from './database';
 // ============================================================================
 export interface OperationCreateDTO {
   title: string;
-  titleKey?: string;
   amount: number;
-  category: string;
-  categoryKey?: string;
+  categoryId: string | null;
+  subcategoryId?: string | null;
   date: Date | string;
   timestamp?: number;
   type: OperationType;
@@ -26,10 +25,9 @@ export interface OperationCreateDTO {
 
 export interface OperationUpdateDTO {
   title?: string;
-  titleKey?: string;
   amount?: number;
-  category?: string;
-  categoryKey?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
   date?: Date | string;
   timestamp?: number;
   type?: OperationType;
@@ -43,7 +41,8 @@ export interface OperationFilterDTO {
   startDate?: Date;
   endDate?: Date;
   type?: OperationType;
-  category?: string;
+  categoryId?: string;
+  subcategoryId?: string;
   page?: number;
   limit?: number;
 }
@@ -70,14 +69,16 @@ export interface UserUpdateDTO {
 // BUDGET DTO
 // ============================================================================
 export interface BudgetCreateDTO {
-  category: string;
+  categoryId: string; // ID категории
+  category: string; // Название категории (кэш)
   budget: number;
   color: string;
   userId: string;
 }
 
 export interface BudgetUpdateDTO {
-  category?: string;
+  categoryId?: string;
+  category?: string; // Обновляется автоматически при изменении categoryId
   budget?: number;
   color?: string;
   spent?: number;

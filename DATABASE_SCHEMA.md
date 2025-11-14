@@ -8,7 +8,7 @@
 | `operations` | Финансовые операции | → users, categories, subcategories |
 | `categories` | Категории операций | → users |
 | `subcategories` | Подкатегории | → categories |
-| `budgets` | Бюджеты по категориям | → users |
+| `budgets` | Бюджеты по категориям | → users, categories |
 | `goals` | Финансовые цели | → users |
 | `debts` | Долги | → users |
 | `email_verifications` | Коды верификации email | - |
@@ -53,15 +53,12 @@
 | `id` | CHAR(36) | UUID операции | PRIMARY KEY |
 | `userId` | CHAR(36) | ID пользователя | NOT NULL, FK → users.id |
 | `title` | VARCHAR(255) | Название операции | NULL |
-| `titleKey` | VARCHAR(255) | Ключ локализации названия | NULL |
 | `type` | ENUM | Тип операции | NOT NULL ('income', 'expense', 'transfer') |
 | `amount` | DECIMAL(15,2) | Сумма | NOT NULL |
 | `currency` | VARCHAR(10) | Валюта | DEFAULT 'RUB' |
-| `category` | VARCHAR(255) | Категория (строка) | NULL |
-| `categoryKey` | VARCHAR(255) | Ключ локализации категории | NULL |
-| `categoryId` | VARCHAR(36) | ID категории (legacy) | NULL, FK → categories.id |
-| `subcategoryId` | VARCHAR(36) | ID подкатегории (legacy) | NULL, FK → subcategories.id |
-| `description` | VARCHAR(255) | Описание (legacy) | NULL |
+| `categoryId` | VARCHAR(36) | ID категории | NULL, FK → categories.id |
+| `subcategoryId` | VARCHAR(36) | ID подкатегории | NULL, FK → subcategories.id |
+| `description` | VARCHAR(255) | Описание (legacy, не используется) | NULL |
 | `fromAccount` | VARCHAR(255) | Счет-источник (для переводов) | NULL |
 | `toAccount` | VARCHAR(255) | Счет-получатель (для переводов) | NULL |
 | `date` | TIMESTAMP | Дата операции | DEFAULT CURRENT_TIMESTAMP |
@@ -74,9 +71,13 @@
 - INDEX (`userId`)
 - INDEX (`type`)
 - INDEX (`date`)
+- INDEX (`categoryId`)
+- INDEX (`subcategoryId`)
 - FOREIGN KEY (`userId`) → `users(id)` ON DELETE CASCADE
 - FOREIGN KEY (`categoryId`) → `categories(id)` ON DELETE SET NULL
 - FOREIGN KEY (`subcategoryId`) → `subcategories(id)` ON DELETE SET NULL
+
+**Примечание**: Названия категорий получаются через JOIN при запросах. Поле `category` в ответах API вычисляется как "Категория > Подкатегория" или просто "Категория".
 
 **Типы операций**:
 - `income` - Доход
@@ -132,7 +133,8 @@
 | Поле | Тип | Описание | Ограничения |
 |------|-----|----------|-------------|
 | `id` | VARCHAR(36) | ID бюджета | PRIMARY KEY |
-| `category` | VARCHAR(255) | Категория | NOT NULL |
+| `categoryId` | VARCHAR(36) | ID категории | NOT NULL, FK → categories.id |
+| `category` | VARCHAR(255) | Название категории (кэш) | NOT NULL |
 | `spent` | DECIMAL(15,2) | Потрачено | DEFAULT 0 |
 | `budget` | DECIMAL(15,2) | Бюджет | NOT NULL |
 | `color` | VARCHAR(20) | Цвет | NOT NULL |
@@ -143,8 +145,12 @@
 **Индексы**:
 - PRIMARY KEY (`id`)
 - INDEX (`userId`)
+- INDEX (`categoryId`)
 - INDEX (`category`)
 - FOREIGN KEY (`userId`) → `users(id)` ON DELETE CASCADE
+- FOREIGN KEY (`categoryId`) → `categories(id)` ON DELETE CASCADE
+
+**Примечание**: Поле `category` хранится как кэш названия категории для быстрого доступа без JOIN. При изменении названия категории нужно обновить все связанные бюджеты.
 
 ---
 

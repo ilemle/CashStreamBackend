@@ -27,15 +27,12 @@ export interface OperationTable {
   id: string; // CHAR(36) PRIMARY KEY
   userId: string; // CHAR(36) NOT NULL
   title: string | null; // VARCHAR(255) NULL
-  titleKey: string | null; // VARCHAR(255) NULL
   type: OperationType; // ENUM('income', 'expense', 'transfer') NOT NULL
   amount: number; // DECIMAL(15, 2) NOT NULL
   currency: string; // VARCHAR(10) DEFAULT 'RUB'
-  category: string | null; // VARCHAR(255) NULL
-  categoryKey: string | null; // VARCHAR(255) NULL
-  categoryId: string | null; // VARCHAR(36) NULL (legacy)
-  subcategoryId: string | null; // VARCHAR(36) NULL (legacy)
-  description: string | null; // VARCHAR(255) NULL (legacy)
+  categoryId: string | null; // VARCHAR(36) NULL, FK → categories.id
+  subcategoryId: string | null; // VARCHAR(36) NULL, FK → subcategories.id
+  description: string | null; // VARCHAR(255) NULL (legacy, можно удалить)
   fromAccount: string | null; // VARCHAR(255) NULL (для переводов)
   toAccount: string | null; // VARCHAR(255) NULL (для переводов)
   date: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -72,7 +69,8 @@ export interface SubcategoryTable {
 // ============================================================================
 export interface BudgetTable {
   id: string; // VARCHAR(36) PRIMARY KEY
-  category: string; // VARCHAR(255) NOT NULL
+  categoryId: string; // VARCHAR(36) NOT NULL, FK → categories.id
+  category: string; // VARCHAR(255) NOT NULL (кэш названия для быстрого доступа)
   spent: number; // DECIMAL(15, 2) DEFAULT 0
   budget: number; // DECIMAL(15, 2) NOT NULL
   color: string; // VARCHAR(20) NOT NULL

@@ -4,10 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 export interface IOperation {
   id?: string;
   title: string;
-  titleKey?: string;
   amount: number;
-  category: string;
-  categoryKey?: string;
+  categoryId: string | null;
+  subcategoryId?: string | null;
   date: Date | string;
   timestamp?: number;
   type: 'income' | 'expense' | 'transfer';
@@ -17,6 +16,10 @@ export interface IOperation {
   currency?: string;  // Валюта операции (RUB, USD, EUR и т.д.)
   userId: string;
   created_at?: Date;
+  // Названия категорий (получаются через JOIN, не сохраняются в БД)
+  categoryName?: string;
+  subcategoryName?: string;
+  category?: string; // Полный путь "Категория > Подкатегория" (вычисляемое поле)
 }
 
 class OperationModel {
@@ -34,22 +37,36 @@ class OperationModel {
       throw new Error('Database pool is not initialized');
     }
 
-    let query = 'SELECT * FROM operations WHERE userId = ?';
+    // JOIN для получения названий категорий
+    let query = `
+      SELECT 
+        o.*,
+        c.name as categoryName,
+        s.name as subcategoryName,
+        CASE 
+          WHEN s.name IS NOT NULL THEN CONCAT(c.name, ' > ', s.name)
+          ELSE c.name
+        END as category
+      FROM operations o
+      LEFT JOIN categories c ON o.categoryId = c.id
+      LEFT JOIN subcategories s ON o.subcategoryId = s.id
+      WHERE o.userId = ?
+    `;
     const params: any[] = [filter.userId];
     
     // Добавляем фильтрацию по датам, если они переданы
     if (filter.date) {
       if (filter.date.$gte) {
-        query += ' AND date >= ?';
+        query += ' AND o.date >= ?';
         params.push(filter.date.$gte);
       }
       if (filter.date.$lte) {
-        query += ' AND date <= ?';
+        query += ' AND o.date <= ?';
         params.push(filter.date.$lte);
       }
     }
     
-    query += ' ORDER BY date DESC, timestamp DESC';
+    query += ' ORDER BY o.date DESC, o.timestamp DESC';
     
     // Добавляем пагинацию, если указана
     // MySQL2 не всегда корректно работает с параметрами для LIMIT/OFFSET,
@@ -91,7 +108,18 @@ class OperationModel {
 
   static async findById(id: string): Promise<IOperation | null> {
     const [rows] = await pool.execute(
-      'SELECT * FROM operations WHERE id = ?',
+      `SELECT 
+        o.*,
+        c.name as categoryName,
+        s.name as subcategoryName,
+        CASE 
+          WHEN s.name IS NOT NULL THEN CONCAT(c.name, ' > ', s.name)
+          ELSE c.name
+        END as category
+      FROM operations o
+      LEFT JOIN categories c ON o.categoryId = c.id
+      LEFT JOIN subcategories s ON o.subcategoryId = s.id
+      WHERE o.id = ?`,
       [id]
     );
     const ops = rows as any[];
@@ -101,10 +129,11 @@ class OperationModel {
   static async create(data: IOperation): Promise<IOperation> {
     const id = uuidv4();
     await pool.execute(
-      'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.titleKey || null, data.amount, data.category, data.categoryKey || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.userId]
+      'INSERT INTO operations (id, title, amount, categoryId, subcategoryId, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.title, data.amount, data.categoryId || null, data.subcategoryId || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.userId]
     );
-    return this.transformOperation({ ...data, id });
+    // Получаем созданную операцию с JOIN для названий категорий
+    return this.findById(id) || this.transformOperation({ ...data, id });
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<IOperation>): Promise<IOperation | null> {
@@ -153,14 +182,13 @@ class OperationModel {
       for (const data of operations) {
         const id = uuidv4();
         await connection.execute(
-          'INSERT INTO operations (id, title, titleKey, amount, category, categoryKey, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO operations (id, title, amount, categoryId, subcategoryId, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             id,
             data.title,
-            data.titleKey || null,
             data.amount,
-            data.category,
-            data.categoryKey || null,
+            data.categoryId || null,
+            data.subcategoryId || null,
             data.date,
             data.timestamp || null,
             data.type,

@@ -5,21 +5,22 @@ import Goal from '../models/Goal';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
 
 // Вспомогательная функция для обновления бюджета
-async function updateBudgetSpent(userId: string, category: string, amount: number, operation: 'add' | 'subtract') {
+async function updateBudgetSpent(userId: string, categoryId: string | null, amount: number, operation: 'add' | 'subtract') {
   try {
-    // Извлекаем основную категорию (до " > ")
-    // Например: "Путешествия > Авиабилеты" → "Путешествия"
-    const mainCategory = category.includes(' > ') ? category.split(' > ')[0] : category;
+    if (!categoryId) {
+      console.log(`⚠️ No categoryId provided, skipping budget update`);
+      return;
+    }
     
-    console.log(`🔍 Looking for budget: "${mainCategory}" (original: "${category}")`);
+    console.log(`🔍 Looking for budget with categoryId: "${categoryId}"`);
     
-    // Находим бюджет по категории и пользователю
+    // Находим бюджет по categoryId и пользователю
     const budgets = await Budget.find({ userId: userId });
-    const budget = budgets.find(b => b.category === mainCategory);
+    const budget = budgets.find(b => b.categoryId === categoryId);
     
     if (!budget || !budget.id) {
-      console.log(`⚠️ Budget not found for category: ${mainCategory}`);
-      console.log(`📋 Available budgets:`, budgets.map(b => b.category));
+      console.log(`⚠️ Budget not found for categoryId: ${categoryId}`);
+      console.log(`📋 Available budgets:`, budgets.map(b => ({ id: b.id, categoryId: b.categoryId, category: b.category })));
       return;
     }
     
@@ -259,10 +260,9 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
   try {
     const opData: IOperation = {
       title: req.body.title,
-      titleKey: req.body.titleKey,
       amount: req.body.amount,
-      category: req.body.category,
-      categoryKey: req.body.categoryKey,
+      categoryId: req.body.categoryId || null,
+      subcategoryId: req.body.subcategoryId || null,
       date: req.body.date || new Date(),
       timestamp: req.body.timestamp,
       type: req.body.type,
@@ -274,8 +274,8 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
     const op = await Operation.create(opData);
     
     // Автоматически обновляем бюджет при создании операции расхода
-    if (op.type === 'expense' && op.category && op.userId) {
-      await updateBudgetSpent(op.userId, op.category, Math.abs(op.amount), 'add');
+    if (op.type === 'expense' && op.categoryId && op.userId) {
+      await updateBudgetSpent(op.userId, op.categoryId, Math.abs(op.amount), 'add');
     }
     
     // Автоматически пополняем цели при создании операции дохода
@@ -306,17 +306,17 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Если изменилась категория или сумма расхода, обновляем бюджеты
-    const oldCategory = existingOp.category;
+    const oldCategoryId = existingOp.categoryId;
     const oldAmount = Math.abs(existingOp.amount);
     const oldType = existingOp.type;
     
-    const newCategory = req.body.category || oldCategory;
+    const newCategoryId = req.body.categoryId !== undefined ? req.body.categoryId : oldCategoryId;
     const newAmount = req.body.amount !== undefined ? Math.abs(req.body.amount) : oldAmount;
     const newType = req.body.type || oldType;
     
     // Откатываем старую операцию из бюджета (если была расходом)
-    if (oldType === 'expense' && oldCategory && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, oldCategory, oldAmount, 'subtract');
+    if (oldType === 'expense' && oldCategoryId && existingOp.userId) {
+      await updateBudgetSpent(existingOp.userId, oldCategoryId, oldAmount, 'subtract');
     }
     
     // Откатываем автопополнение целей (если была доходом)
@@ -330,8 +330,8 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
     
     // Добавляем новую операцию в бюджет (если расход)
-    if (newType === 'expense' && newCategory && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, newCategory, newAmount, 'add');
+    if (newType === 'expense' && newCategoryId && existingOp.userId) {
+      await updateBudgetSpent(existingOp.userId, newCategoryId, newAmount, 'add');
     }
     
     // Автопополняем цели (если теперь доход и был не доходом)
@@ -361,8 +361,8 @@ export const deleteOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Автоматически обновляем бюджет при удалении операции расхода
-    if (existingOp.type === 'expense' && existingOp.category && existingOp.userId) {
-      await updateBudgetSpent(existingOp.userId, existingOp.category, Math.abs(existingOp.amount), 'subtract');
+    if (existingOp.type === 'expense' && existingOp.categoryId && existingOp.userId) {
+      await updateBudgetSpent(existingOp.userId, existingOp.categoryId, Math.abs(existingOp.amount), 'subtract');
     }
     
     await Operation.findByIdAndDelete(req.params.id);
@@ -408,10 +408,10 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
 
     // Валидация каждой операции
     for (const op of operations) {
-      if (!op.title || op.amount === undefined || !op.category || !op.date || !op.type) {
+      if (!op.title || op.amount === undefined || !op.date || !op.type) {
         res.status(400).json({
           success: false,
-          message: `Invalid operation: missing required fields (title, amount, category, date, type)`
+          message: `Invalid operation: missing required fields (title, amount, date, type). categoryId is optional but recommended.`
         });
         return;
       }
@@ -422,10 +422,9 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     // Подготавливаем данные для создания
     const operationsData: IOperation[] = operations.map((op: any) => ({
       title: op.title,
-      titleKey: op.titleKey || undefined,
       amount: op.amount,
-      category: op.category,
-      categoryKey: op.categoryKey || undefined,
+      categoryId: op.categoryId || null,
+      subcategoryId: op.subcategoryId || null,
       date: op.date,
       timestamp: op.timestamp || undefined,
       type: op.type,
@@ -441,8 +440,8 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     // Обновляем бюджеты и цели для каждой операции
     for (const op of createdOperations) {
       // Автоматически обновляем бюджет при создании операции расхода
-      if (op.type === 'expense' && op.category && op.userId) {
-        await updateBudgetSpent(op.userId, op.category, Math.abs(op.amount), 'add');
+      if (op.type === 'expense' && op.categoryId && op.userId) {
+        await updateBudgetSpent(op.userId, op.categoryId, Math.abs(op.amount), 'add');
       }
       
       // Автоматически пополняем цели при создании операции дохода

@@ -151,18 +151,27 @@ class OperationModel {
   }
 
   static async findByIdAndUpdate(id: string, data: Partial<CreateOperationRequest>, language: string = 'ru'): Promise<OperationDTO | null> {
+    console.log('🔧 Operation.findByIdAndUpdate called with:', { id, data, dataKeys: Object.keys(data) });
+
     const sets: string[] = [];
     const values: any[] = [];
 
     // Поля, которые нельзя обновлять (вычисляемые или системные)
-    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType', 'categoryName', 'subcategoryName', 'category'];
+    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType', 'categoryName', 'subcategoryName', 'category', '_id'];
 
     Object.entries(data).forEach(([key, value]) => {
+      console.log(`🔧 Processing field: ${key} = ${value} (type: ${typeof value})`);
       if (value !== undefined && !excludedFields.includes(key)) {
         sets.push(`${key} = ?`);
         values.push(value);
+        console.log(`🔧 Adding to SQL: ${key} = ? with value: ${value}`);
+      } else {
+        console.log(`🔧 Skipping field: ${key} (excluded or undefined)`);
       }
     });
+
+    console.log('🔧 Generated SQL sets:', sets);
+    console.log('🔧 SQL values:', values);
 
     if (sets.length === 0) {
       return this.findById(id, language);

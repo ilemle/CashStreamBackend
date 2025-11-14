@@ -296,6 +296,12 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
 
 export const updateOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    console.log('📝 Update operation request:', {
+      params: req.params,
+      body: req.body,
+      bodyKeys: Object.keys(req.body)
+    });
+
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
     // Проверяем существование и владельца
     const existingOp = await Operation.findById(req.params.id, language);

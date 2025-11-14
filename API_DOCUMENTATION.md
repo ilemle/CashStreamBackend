@@ -465,10 +465,11 @@ interface GoalDTO {
 
 ### GET /api/categories
 
-Получить все категории (системные + пользовательские).
+Получить все категории (системные + пользовательские) с переводами.
 
 **Query параметры**:
-- `type` (string, optional) - 'income' или 'expense'
+- `type` (string, optional) - Тип операции: 'income' или 'expense'
+- `language` (string, optional) - ISO 639-1 код языка (ru, en, de, fr, etc.), по умолчанию 'ru'
 
 **Response 200**:
 ```typescript
@@ -481,19 +482,28 @@ interface GoalDTO {
 **Типы**:
 ```typescript
 interface CategoryDTO {
-  id: string;
-  name: string;
+  id: string; // UUID категории
+  nameKey: string; // Ключ для переводов (например, 'category.food')
+  name: string; // Переведенное название (из translations)
   icon?: string;
   isSystem: boolean;
   subcategories?: SubcategoryDTO[];
 }
 
 interface SubcategoryDTO {
-  id: string;
-  categoryId: string;
-  name: string;
+  id: string; // UUID подкатегории
+  categoryId: string; // UUID категории
+  nameKey: string; // Ключ для переводов (например, 'subcategory.groceries')
+  name: string; // Переведенное название (из translations)
   icon?: string;
 }
+```
+
+**Примеры запросов**:
+```
+GET /api/categories?type=expense&language=ru
+GET /api/categories?type=income&language=en
+GET /api/categories?language=de
 ```
 
 ---
@@ -505,8 +515,20 @@ interface SubcategoryDTO {
 **Request Body**:
 ```typescript
 {
-  name: string;
+  name: string; // Название категории (будет сохранено как перевод для указанного языка)
   icon?: string;
+  language?: string; // ISO 639-1 код языка (по умолчанию 'ru')
+}
+```
+
+**Query параметры**:
+- `language` (string, optional) - Язык для перевода (если не указан в body)
+
+**Response 201**:
+```typescript
+{
+  success: true,
+  data: CategoryDTO
 }
 ```
 

@@ -1,31 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import CategoryModel from '../models/Category';
-import { CATEGORIES, INCOME_CATEGORIES } from '../constants/categories'; // Мы создадим этот файл
 
-// Получить все категории (системные + пользовательские)
+// Получить все категории (системные + пользовательские) с переводами
 export const getCategories = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
-    const userId = req.user?.id;
-    const operationType = req.query.type as string;
+    const userId = req.user?.id || null;
+    const operationType = req.query.type as 'income' | 'expense' | undefined;
+    const language = (req.query.language as string) || 'ru'; // По умолчанию русский
 
-    // Получаем системные категории
-    const systemCategories = operationType === 'income' ? INCOME_CATEGORIES : CATEGORIES;
-
-    // Получаем пользовательские категории
-    let userCategories: any[] = [];
-    if (userId) {
-      userCategories = await CategoryModel.getUserCategories(userId);
-      // Преобразуем пользовательские категории в нужный формат и добавляем подкатегории
-      for (let i = 0; i < userCategories.length; i++) {
-        const categoryWithSubs = await CategoryModel.getCategoryWithSubcategories(userCategories[i].id);
-        if (categoryWithSubs) {
-          userCategories[i] = categoryWithSubs;
-        }
-      }
-    }
-
-    // Объединяем системные и пользовательские категории
-    const allCategories = [...systemCategories, ...userCategories];
+    // Получаем все категории с подкатегориями и переводами
+    const allCategories = await CategoryModel.getAllCategoriesWithSubcategories(
+      userId,
+      language,
+      operationType
+    );
 
     res.json(allCategories);
   } catch (error) {
@@ -39,18 +27,23 @@ export const createUserCategory = async (req: Request, res: Response, _next: Nex
   try {
     const userId = req.user?.id;
     const { name, icon } = req.body;
+    const language = (req.query.language as string) || (req.body.language as string) || 'ru';
 
     if (!name) {
       res.status(400).json({ message: 'Category name is required' });
       return;
     }
 
-    const category = await CategoryModel.createCategory({
+    const category = await CategoryModel.createCategory(
+      {
+        nameKey: '', // Будет сгенерирован автоматически
+        icon,
+        isSystem: false,
+        userId,
+      },
       name,
-      icon,
-      isSystem: false,
-      userId,
-    });
+      language
+    );
 
     res.status(201).json(category);
   } catch (error) {
@@ -64,13 +57,14 @@ export const addSubcategory = async (req: Request, res: Response, _next: NextFun
   try {
     const { categoryId } = req.params;
     const { name, icon } = req.body;
+    const language = (req.query.language as string) || (req.body.language as string) || 'ru';
 
     if (!name) {
       res.status(400).json({ message: 'Subcategory name is required' });
       return;
     }
 
-    const subcategory = await CategoryModel.createSubcategory(categoryId, name, icon);
+    const subcategory = await CategoryModel.createSubcategory(categoryId, name, language, icon);
     res.status(201).json(subcategory);
   } catch (error) {
     console.error('Error adding subcategory:', error);

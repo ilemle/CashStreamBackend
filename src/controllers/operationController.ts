@@ -118,7 +118,8 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     });
     
     // Строим базовый запрос
-    const query: any = { userId: userId || '' };
+    const language = (req.query.language as string) || 'ru'; // Язык для переводов категорий
+    const query: any = { userId: userId || '', language };
     
     // Добавляем фильтрацию по датам, если они переданы
     if (startDate || endDate) {
@@ -244,7 +245,8 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
 
 export const getOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const op = await Operation.findById(req.params.id);
+    const language = (req.query.language as string) || 'ru';
+    const op = await Operation.findById(req.params.id, language);
     if (!op || op.userId !== req.user?.id) {
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
@@ -258,20 +260,21 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
 
 export const createOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    const language = (req.query.language as string) || (req.body.language as string) || 'ru';
     const opData: IOperation = {
       title: req.body.title,
       amount: req.body.amount,
-      categoryId: req.body.categoryId || null,
-      subcategoryId: req.body.subcategoryId || null,
+      categoryId: req.body.categoryId !== undefined ? req.body.categoryId : null,
+      subcategoryId: req.body.subcategoryId !== undefined ? req.body.subcategoryId : null,
       date: req.body.date || new Date(),
-      timestamp: req.body.timestamp,
+      timestamp: req.body.timestamp !== undefined ? req.body.timestamp : undefined,
       type: req.body.type,
-      fromAccount: req.body.fromAccount,
-      toAccount: req.body.toAccount,
+      fromAccount: req.body.fromAccount !== undefined ? req.body.fromAccount : undefined,
+      toAccount: req.body.toAccount !== undefined ? req.body.toAccount : undefined,
       currency: req.body.currency || 'RUB',  // Валюта операции
       userId: req.user?.id || ''
     };
-    const op = await Operation.create(opData);
+    const op = await Operation.create(opData, language);
     
     // Автоматически обновляем бюджет при создании операции расхода
     if (op.type === 'expense' && op.categoryId && op.userId) {
@@ -292,8 +295,9 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
 
 export const updateOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    const language = (req.query.language as string) || (req.body.language as string) || 'ru';
     // Проверяем существование и владельца
-    const existingOp = await Operation.findById(req.params.id);
+    const existingOp = await Operation.findById(req.params.id, language);
     if (!existingOp) {
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
@@ -327,7 +331,7 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Обновляем операцию
-    const op = await Operation.findByIdAndUpdate(req.params.id, req.body);
+    const op = await Operation.findByIdAndUpdate(req.params.id, req.body, language);
     
     // Добавляем новую операцию в бюджет (если расход)
     if (newType === 'expense' && newCategoryId && existingOp.userId) {
@@ -348,8 +352,9 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
 
 export const deleteOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    const language = (req.query.language as string) || 'ru';
     // Проверяем существование и владельца
-    const existingOp = await Operation.findById(req.params.id);
+    const existingOp = await Operation.findById(req.params.id, language);
     if (!existingOp) {
       res.status(404).json({ success: false, message: 'Operation not found' });
       return;
@@ -435,7 +440,8 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     }));
 
     // Создаем операции в транзакции
-    const createdOperations = await Operation.createMany(operationsData);
+    const language = (req.query.language as string) || (req.body.language as string) || 'ru';
+    const createdOperations = await Operation.createMany(operationsData, language);
 
     // Обновляем бюджеты и цели для каждой операции
     for (const op of createdOperations) {

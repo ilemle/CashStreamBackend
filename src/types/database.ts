@@ -45,8 +45,8 @@ export interface OperationTable {
 // CATEGORIES TABLE
 // ============================================================================
 export interface CategoryTable {
-  id: string; // VARCHAR(36) PRIMARY KEY
-  name: string; // VARCHAR(255) NOT NULL
+  id: string; // CHAR(36) PRIMARY KEY (UUID)
+  nameKey: string; // VARCHAR(255) NOT NULL UNIQUE (ключ для переводов, например 'category.food')
   icon: string | null; // VARCHAR(100)
   isSystem: boolean; // BOOLEAN DEFAULT FALSE
   userId: string | null; // VARCHAR(36) (NULL для системных категорий)
@@ -57,11 +57,24 @@ export interface CategoryTable {
 // SUBCATEGORIES TABLE
 // ============================================================================
 export interface SubcategoryTable {
-  id: string; // VARCHAR(36) PRIMARY KEY
-  categoryId: string; // VARCHAR(36) NOT NULL
-  name: string; // VARCHAR(255) NOT NULL
+  id: string; // CHAR(36) PRIMARY KEY (UUID)
+  categoryId: string; // CHAR(36) NOT NULL
+  nameKey: string; // VARCHAR(255) NOT NULL UNIQUE (ключ для переводов, например 'subcategory.groceries')
   icon: string | null; // VARCHAR(100)
   createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+}
+
+// ============================================================================
+// TRANSLATIONS TABLE
+// ============================================================================
+export interface TranslationTable {
+  id: string; // CHAR(36) PRIMARY KEY
+  entityType: 'category' | 'subcategory'; // ENUM
+  entityId: string; // CHAR(36) NOT NULL (ID категории или подкатегории)
+  language: string; // VARCHAR(10) NOT NULL (ISO 639-1 код языка: ru, en, etc.)
+  name: string; // VARCHAR(255) NOT NULL (переведенное название)
+  createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updatedAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
 
 // ============================================================================

@@ -3,13 +3,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface ISubcategory {
   id: string;
-  name: string;
+  nameKey: string; // Ключ для переводов
+  name: string; // Переведенное название (из translations или nameKey как fallback)
   icon?: string;
 }
 
 export interface ICategory {
   id?: string;
-  name: string;
+  nameKey: string; // Ключ для переводов
+  name: string; // Переведенное название (из translations или nameKey как fallback)
   icon?: string;
   subcategories?: ISubcategory[];
   isSystem: boolean; // Системная категория или пользовательская
@@ -18,30 +20,68 @@ export interface ICategory {
 }
 
 class CategoryModel {
-  // Получить системные категории
-  static async getSystemCategories(): Promise<ICategory[]> {
+  // Получить системные категории с переводами
+  static async getSystemCategories(language: string = 'ru'): Promise<ICategory[]> {
     const [rows] = await pool.execute(
-      'SELECT * FROM categories WHERE isSystem = TRUE ORDER BY name',
-      []
+      `SELECT 
+        c.id,
+        c.nameKey,
+        c.icon,
+        c.isSystem,
+        c.userId,
+        c.createdAt,
+        COALESCE(t.name, c.nameKey) as name
+      FROM categories c
+      LEFT JOIN translations t ON t.entityType = 'category' 
+        AND t.entityId = c.id 
+        AND t.language = ?
+      WHERE c.isSystem = TRUE 
+      ORDER BY c.nameKey`,
+      [language]
     );
     return rows as ICategory[];
   }
 
-  // Получить пользовательские категории
-  static async getUserCategories(userId: string): Promise<ICategory[]> {
+  // Получить пользовательские категории с переводами
+  static async getUserCategories(userId: string, language: string = 'ru'): Promise<ICategory[]> {
     const [rows] = await pool.execute(
-      'SELECT * FROM categories WHERE userId = ? ORDER BY name',
-      [userId]
+      `SELECT 
+        c.id,
+        c.nameKey,
+        c.icon,
+        c.isSystem,
+        c.userId,
+        c.createdAt,
+        COALESCE(t.name, c.nameKey) as name
+      FROM categories c
+      LEFT JOIN translations t ON t.entityType = 'category' 
+        AND t.entityId = c.id 
+        AND t.language = ?
+      WHERE c.userId = ? 
+      ORDER BY c.nameKey`,
+      [language, userId]
     );
     return rows as ICategory[];
   }
 
-  // Получить категории с подкатегориями
-  static async getCategoryWithSubcategories(categoryId: string): Promise<ICategory | null> {
-    // Получить основную категорию
+  // Получить категории с подкатегориями и переводами
+  static async getCategoryWithSubcategories(categoryId: string, language: string = 'ru'): Promise<ICategory | null> {
+    // Получить основную категорию с переводом
     const [categoryRows] = await pool.execute(
-      'SELECT * FROM categories WHERE id = ?',
-      [categoryId]
+      `SELECT 
+        c.id,
+        c.nameKey,
+        c.icon,
+        c.isSystem,
+        c.userId,
+        c.createdAt,
+        COALESCE(t.name, c.nameKey) as name
+      FROM categories c
+      LEFT JOIN translations t ON t.entityType = 'category' 
+        AND t.entityId = c.id 
+        AND t.language = ?
+      WHERE c.id = ?`,
+      [language, categoryId]
     );
     const categories = categoryRows as ICategory[];
     
@@ -49,10 +89,22 @@ class CategoryModel {
       return null;
     }
 
-    // Получить подкатегории для этой категории
+    // Получить подкатегории с переводами
     const [subcategoryRows] = await pool.execute(
-      'SELECT * FROM subcategories WHERE categoryId = ? ORDER BY name',
-      [categoryId]
+      `SELECT 
+        s.id,
+        s.categoryId,
+        s.nameKey,
+        s.icon,
+        s.createdAt,
+        COALESCE(t.name, s.nameKey) as name
+      FROM subcategories s
+      LEFT JOIN translations t ON t.entityType = 'subcategory' 
+        AND t.entityId = s.id 
+        AND t.language = ?
+      WHERE s.categoryId = ? 
+      ORDER BY s.nameKey`,
+      [language, categoryId]
     );
     const subcategories = subcategoryRows as ISubcategory[];
 
@@ -62,62 +114,155 @@ class CategoryModel {
     };
   }
 
+  // Получить все категории (системные + пользовательские) с подкатегориями и переводами
+  static async getAllCategoriesWithSubcategories(userId: string | null, language: string = 'ru', operationType?: 'income' | 'expense'): Promise<ICategory[]> {
+    // Получаем системные категории
+    const systemCategories = await this.getSystemCategories(language);
+    
+    // Фильтруем по типу операции, если указан
+    let filteredSystemCategories = systemCategories;
+    if (operationType === 'income') {
+      // Для доходов используем только категории доходов (по nameKey)
+      filteredSystemCategories = systemCategories.filter(c => 
+        c.nameKey.startsWith('category.salary') ||
+        c.nameKey.startsWith('category.business') ||
+        c.nameKey.startsWith('category.investment') ||
+        c.nameKey.startsWith('category.freelance') ||
+        c.nameKey.startsWith('category.bonus') ||
+        c.nameKey.startsWith('category.other')
+      );
+    } else if (operationType === 'expense') {
+      // Для расходов используем только категории расходов
+      filteredSystemCategories = systemCategories.filter(c => 
+        !c.nameKey.startsWith('category.salary') &&
+        !c.nameKey.startsWith('category.business') &&
+        !c.nameKey.startsWith('category.investment') &&
+        !c.nameKey.startsWith('category.freelance') &&
+        !c.nameKey.startsWith('category.bonus') &&
+        !c.nameKey.startsWith('category.other')
+      );
+    }
+
+    // Получаем пользовательские категории
+    let userCategories: ICategory[] = [];
+    if (userId) {
+      userCategories = await this.getUserCategories(userId, language);
+      // Добавляем подкатегории для пользовательских категорий
+      for (let i = 0; i < userCategories.length; i++) {
+        const categoryWithSubs = await this.getCategoryWithSubcategories(userCategories[i].id!, language);
+        if (categoryWithSubs) {
+          userCategories[i] = categoryWithSubs;
+        }
+      }
+    }
+
+    // Добавляем подкатегории для системных категорий
+    for (let i = 0; i < filteredSystemCategories.length; i++) {
+      const categoryWithSubs = await this.getCategoryWithSubcategories(filteredSystemCategories[i].id!, language);
+      if (categoryWithSubs) {
+        filteredSystemCategories[i] = categoryWithSubs;
+      }
+    }
+
+    return [...filteredSystemCategories, ...userCategories];
+  }
+
   // Создать пользовательскую категорию
-  static async createCategory(data: Omit<ICategory, 'id'>): Promise<ICategory> {
+  static async createCategory(data: Omit<ICategory, 'id' | 'name'>, name: string, language: string = 'ru'): Promise<ICategory> {
     const id = uuidv4();
+    const nameKey = `category.user.${id}`; // Генерируем уникальный nameKey
+    
     await pool.execute(
-      'INSERT INTO categories (id, name, icon, isSystem, userId) VALUES (?, ?, ?, ?, ?)',
-      [id, data.name, data.icon || null, false, data.userId]
+      'INSERT INTO categories (id, nameKey, icon, isSystem, userId) VALUES (?, ?, ?, ?, ?)',
+      [id, nameKey, data.icon || null, false, data.userId]
     );
-    return { ...data, id };
+
+    // Создаем перевод для указанного языка
+    await pool.execute(
+      'INSERT INTO translations (id, entityType, entityId, language, name) VALUES (UUID(), ?, ?, ?, ?)',
+      ['category', id, language, name]
+    );
+
+    return { ...data, id, nameKey, name };
   }
 
   // Создать подкатегорию
-  static async createSubcategory(categoryId: string, name: string, icon?: string): Promise<ISubcategory> {
+  static async createSubcategory(categoryId: string, name: string, language: string = 'ru', icon?: string): Promise<ISubcategory> {
     const id = uuidv4();
+    const nameKey = `subcategory.user.${id}`; // Генерируем уникальный nameKey
+    
     await pool.execute(
-      'INSERT INTO subcategories (id, categoryId, name, icon) VALUES (?, ?, ?, ?)',
-      [id, categoryId, name, icon || null]
+      'INSERT INTO subcategories (id, categoryId, nameKey, icon) VALUES (?, ?, ?, ?)',
+      [id, categoryId, nameKey, icon || null]
     );
-    return { id, name, icon };
+
+    // Создаем перевод для указанного языка
+    await pool.execute(
+      'INSERT INTO translations (id, entityType, entityId, language, name) VALUES (UUID(), ?, ?, ?, ?)',
+      ['subcategory', id, language, name]
+    );
+
+    return { id, nameKey, name, icon };
   }
 
   // Обновить категорию
-  static async updateCategory(id: string, data: Partial<ICategory>): Promise<ICategory | null> {
+  static async updateCategory(id: string, data: Partial<ICategory>, language: string = 'ru'): Promise<ICategory | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
-    const allowedFields = ['name', 'icon'];
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && allowedFields.includes(key)) {
-        sets.push(`${key} = ?`);
-        values.push(value);
-      }
-    });
-
-    if (sets.length === 0) {
-      return this.getCategoryWithSubcategories(id);
+    // Обновляем только icon (nameKey нельзя менять, name обновляется через translations)
+    if (data.icon !== undefined) {
+      sets.push('icon = ?');
+      values.push(data.icon);
     }
 
-    values.push(id);
-    await pool.execute(
-      `UPDATE categories SET ${sets.join(', ')} WHERE id = ?`,
-      values
-    );
+    // Обновляем перевод, если передан name
+    if (data.name !== undefined) {
+      await pool.execute(
+        `INSERT INTO translations (id, entityType, entityId, language, name) 
+         VALUES (UUID(), 'category', ?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+        [id, language, data.name]
+      );
+    }
 
-    return this.getCategoryWithSubcategories(id);
+    if (sets.length > 0) {
+      values.push(id);
+      await pool.execute(
+        `UPDATE categories SET ${sets.join(', ')} WHERE id = ?`,
+        values
+      );
+    }
+
+    return this.getCategoryWithSubcategories(id, language);
   }
 
   // Удалить категорию
   static async deleteCategory(id: string): Promise<void> {
-    // Сначала удалить все подкатегории
+    // Сначала удалить все подкатегории и их переводы
+    const [subcategories] = await pool.execute(
+      'SELECT id FROM subcategories WHERE categoryId = ?',
+      [id]
+    ) as any[];
+    
+    for (const sub of subcategories) {
+      await pool.execute('DELETE FROM translations WHERE entityType = ? AND entityId = ?', ['subcategory', sub.id]);
+    }
+    
     await pool.execute('DELETE FROM subcategories WHERE categoryId = ?', [id]);
+    
+    // Удалить переводы категории
+    await pool.execute('DELETE FROM translations WHERE entityType = ? AND entityId = ?', ['category', id]);
+    
     // Затем удалить категорию
     await pool.execute('DELETE FROM categories WHERE id = ?', [id]);
   }
 
   // Удалить подкатегорию
   static async deleteSubcategory(id: string): Promise<void> {
+    // Удалить переводы подкатегории
+    await pool.execute('DELETE FROM translations WHERE entityType = ? AND entityId = ?', ['subcategory', id]);
+    // Удалить подкатегорию
     await pool.execute('DELETE FROM subcategories WHERE id = ?', [id]);
   }
 }

@@ -37,22 +37,29 @@ class OperationModel {
       throw new Error('Database pool is not initialized');
     }
 
-    // JOIN для получения названий категорий
+    // JOIN для получения названий категорий из translations
+    const language = filter.language || 'ru'; // Язык по умолчанию
     let query = `
       SELECT 
         o.*,
-        c.name as categoryName,
-        s.name as subcategoryName,
+        COALESCE(ct.name, c.nameKey) as categoryName,
+        COALESCE(st.name, s.nameKey) as subcategoryName,
         CASE 
-          WHEN s.name IS NOT NULL THEN CONCAT(c.name, ' > ', s.name)
-          ELSE c.name
+          WHEN COALESCE(st.name, s.nameKey) IS NOT NULL THEN CONCAT(COALESCE(ct.name, c.nameKey), ' > ', COALESCE(st.name, s.nameKey))
+          ELSE COALESCE(ct.name, c.nameKey)
         END as category
       FROM operations o
       LEFT JOIN categories c ON o.categoryId = c.id
+      LEFT JOIN translations ct ON ct.entityType = 'category' 
+        AND ct.entityId = c.id 
+        AND ct.language = ?
       LEFT JOIN subcategories s ON o.subcategoryId = s.id
+      LEFT JOIN translations st ON st.entityType = 'subcategory' 
+        AND st.entityId = s.id 
+        AND st.language = ?
       WHERE o.userId = ?
     `;
-    const params: any[] = [filter.userId];
+    const params: any[] = [language, language, filter.userId];
     
     // Добавляем фильтрацию по датам, если они переданы
     if (filter.date) {
@@ -106,34 +113,56 @@ class OperationModel {
     return (rows as any[])[0]?.count || 0;
   }
 
-  static async findById(id: string): Promise<IOperation | null> {
+  static async findById(id: string, language: string = 'ru'): Promise<IOperation | null> {
     const [rows] = await pool.execute(
       `SELECT 
         o.*,
-        c.name as categoryName,
-        s.name as subcategoryName,
+        COALESCE(ct.name, c.nameKey) as categoryName,
+        COALESCE(st.name, s.nameKey) as subcategoryName,
         CASE 
-          WHEN s.name IS NOT NULL THEN CONCAT(c.name, ' > ', s.name)
-          ELSE c.name
+          WHEN COALESCE(st.name, s.nameKey) IS NOT NULL THEN CONCAT(COALESCE(ct.name, c.nameKey), ' > ', COALESCE(st.name, s.nameKey))
+          ELSE COALESCE(ct.name, c.nameKey)
         END as category
       FROM operations o
       LEFT JOIN categories c ON o.categoryId = c.id
+      LEFT JOIN translations ct ON ct.entityType = 'category' 
+        AND ct.entityId = c.id 
+        AND ct.language = ?
       LEFT JOIN subcategories s ON o.subcategoryId = s.id
+      LEFT JOIN translations st ON st.entityType = 'subcategory' 
+        AND st.entityId = s.id 
+        AND st.language = ?
       WHERE o.id = ?`,
-      [id]
+      [language, language, id]
     );
     const ops = rows as any[];
     return ops[0] ? this.transformOperation(ops[0]) : null;
   }
 
-  static async create(data: IOperation): Promise<IOperation> {
+  static async create(data: IOperation, language: string = 'ru'): Promise<IOperation> {
     const id = uuidv4();
+    
+    const insertValues = [
+      id,
+      data.title,
+      data.amount,
+      data.categoryId ?? null,
+      data.subcategoryId ?? null,
+      data.date,
+      data.timestamp ?? null,
+      data.type,
+      data.fromAccount ?? null,
+      data.toAccount ?? null,
+      data.currency ?? 'RUB',
+      data.userId
+    ];
+    
     await pool.execute(
       'INSERT INTO operations (id, title, amount, categoryId, subcategoryId, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.title, data.amount, data.categoryId || null, data.subcategoryId || null, data.date, data.timestamp || null, data.type, data.fromAccount || null, data.toAccount || null, data.currency || 'RUB', data.userId]
+      insertValues
     );
     // Получаем созданную операцию с JOIN для названий категорий
-    const created = await this.findById(id);
+    const created = await this.findById(id, language);
     if (created) {
       return created;
     }
@@ -141,12 +170,12 @@ class OperationModel {
     return this.transformOperation({ ...data, id });
   }
 
-  static async findByIdAndUpdate(id: string, data: Partial<IOperation>): Promise<IOperation | null> {
+  static async findByIdAndUpdate(id: string, data: Partial<IOperation>, language: string = 'ru'): Promise<IOperation | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
     // Поля, которые нельзя обновлять (вычисляемые или системные)
-    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType'];
+    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType', 'categoryName', 'subcategoryName', 'category'];
 
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && !excludedFields.includes(key)) {
@@ -156,7 +185,7 @@ class OperationModel {
     });
 
     if (sets.length === 0) {
-      return this.findById(id);
+      return this.findById(id, language);
     }
 
     values.push(id);
@@ -165,14 +194,14 @@ class OperationModel {
       values
     );
 
-    return this.findById(id);
+    return this.findById(id, language);
   }
 
   static async findByIdAndDelete(id: string): Promise<void> {
     await pool.execute('DELETE FROM operations WHERE id = ?', [id]);
   }
 
-  static async createMany(operations: IOperation[]): Promise<IOperation[]> {
+  static async createMany(operations: IOperation[], language: string = 'ru'): Promise<IOperation[]> {
     if (operations.length === 0) {
       return [];
     }
@@ -186,24 +215,33 @@ class OperationModel {
 
       for (const data of operations) {
         const id = uuidv4();
+        
+        const insertValues = [
+          id,
+          data.title,
+          data.amount,
+          data.categoryId ?? null,
+          data.subcategoryId ?? null,
+          data.date,
+          data.timestamp ?? null,
+          data.type,
+          data.fromAccount ?? null,
+          data.toAccount ?? null,
+          data.currency ?? 'RUB',
+          data.userId
+        ];
+        
         await connection.execute(
           'INSERT INTO operations (id, title, amount, categoryId, subcategoryId, date, timestamp, type, fromAccount, toAccount, currency, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [
-            id,
-            data.title,
-            data.amount,
-            data.categoryId || null,
-            data.subcategoryId || null,
-            data.date,
-            data.timestamp || null,
-            data.type,
-            data.fromAccount || null,
-            data.toAccount || null,
-            data.currency || 'RUB',
-            data.userId
-          ]
+          insertValues
         );
-        createdOperations.push(this.transformOperation({ ...data, id }));
+        // Получаем созданную операцию с переводами
+        const created = await this.findById(id, language);
+        if (created) {
+          createdOperations.push(created);
+        } else {
+          createdOperations.push(this.transformOperation({ ...data, id }));
+        }
       }
 
       await connection.commit();

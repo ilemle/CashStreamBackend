@@ -101,12 +101,38 @@ function generateOperation(userId, startDate, endDate, categoriesMap, subcategor
   
   if (type === 'expense') {
     const categoryData = getRandomItem(EXPENSE_CATEGORIES);
-    const categoryInfo = categoriesMap[categoryData.name];
+    // Ищем категорию по имени (для обратной совместимости)
+    let categoryInfo = categoriesMap[categoryData.name] || categoriesMap[categoryData.name.toLowerCase()];
+    
+    // Если не нашли по имени, пробуем найти по nameKey (для новых категорий)
+    if (!categoryInfo) {
+      // Пробуем найти по nameKey, если категория имеет формат nameKey
+      const possibleNameKeys = Object.keys(categoriesMap).filter(key => 
+        key.includes(categoryData.name.toLowerCase()) || 
+        categoryData.name.toLowerCase().includes(key.toLowerCase())
+      );
+      if (possibleNameKeys.length > 0) {
+        categoryInfo = categoriesMap[possibleNameKeys[0]];
+      }
+    }
+    
     categoryId = categoryInfo ? categoryInfo.id : null;
     
     if (categoryId && Math.random() < 0.7) {
       const subcategoryName = getRandomItem(categoryData.subcategories);
-      const subcategoryInfo = subcategoriesMap[subcategoryName];
+      // Ищем подкатегорию аналогично
+      let subcategoryInfo = subcategoriesMap[subcategoryName] || subcategoriesMap[subcategoryName.toLowerCase()];
+      
+      if (!subcategoryInfo) {
+        const possibleSubKeys = Object.keys(subcategoriesMap).filter(key => 
+          key.includes(subcategoryName.toLowerCase()) || 
+          subcategoryName.toLowerCase().includes(key.toLowerCase())
+        );
+        if (possibleSubKeys.length > 0) {
+          subcategoryInfo = subcategoriesMap[possibleSubKeys[0]];
+        }
+      }
+      
       subcategoryId = subcategoryInfo && subcategoryInfo.categoryId === categoryId ? subcategoryInfo.id : null;
     } else {
       subcategoryId = null;
@@ -116,7 +142,20 @@ function generateOperation(userId, startDate, endDate, categoriesMap, subcategor
     amount = -Math.abs(getRandomNumber(100, 50000)); // Отрицательное число для расходов
   } else if (type === 'income') {
     const categoryName = getRandomItem(INCOME_CATEGORIES);
-    const categoryInfo = categoriesMap[categoryName];
+    // Ищем категорию по имени
+    let categoryInfo = categoriesMap[categoryName] || categoriesMap[categoryName.toLowerCase()];
+    
+    // Если не нашли по имени, пробуем найти по nameKey
+    if (!categoryInfo) {
+      const possibleNameKeys = Object.keys(categoriesMap).filter(key => 
+        key.includes(categoryName.toLowerCase()) || 
+        categoryName.toLowerCase().includes(key.toLowerCase())
+      );
+      if (possibleNameKeys.length > 0) {
+        categoryInfo = categoriesMap[possibleNameKeys[0]];
+      }
+    }
+    
     categoryId = categoryInfo ? categoryInfo.id : null;
     subcategoryId = null;
     title = getRandomItem(INCOME_TITLES);
@@ -178,29 +217,52 @@ async function generateOperations(userId, count = 50, daysBack = 90) {
     console.log(`   Количество операций: ${count}`);
     console.log(`   Период: последние ${daysBack} дней\n`);
 
-    // Получаем категории из базы данных
+    // Получаем категории из базы данных с переводами
     console.log('📂 Загрузка категорий из базы данных...');
+    const language = 'ru'; // Используем русский язык для генерации
     const [categoryRows] = await connection.execute(
-      'SELECT id, name FROM categories WHERE isSystem = TRUE OR userId = ?',
-      [userId]
+      `SELECT 
+        c.id,
+        c.nameKey,
+        COALESCE(t.name, c.nameKey) as name
+      FROM categories c
+      LEFT JOIN translations t ON t.entityType = 'category' 
+        AND t.entityId = c.id 
+        AND t.language = ?
+      WHERE c.isSystem = TRUE OR c.userId = ?`,
+      [language, userId]
     );
     
-    // Создаем мапу категорий по имени
+    // Создаем мапу категорий по nameKey и по имени (для обратной совместимости)
     const categoriesMap = {};
     for (const cat of categoryRows) {
-      categoriesMap[cat.name] = cat;
+      categoriesMap[cat.nameKey] = cat;
+      categoriesMap[cat.name] = cat; // Для обратной совместимости
+      categoriesMap[cat.name.toLowerCase()] = cat;
     }
     
-    // Получаем подкатегории
+    // Получаем подкатегории с переводами
     const [subcategoryRows] = await connection.execute(
-      'SELECT s.id, s.name, s.categoryId FROM subcategories s INNER JOIN categories c ON s.categoryId = c.id WHERE c.isSystem = TRUE OR c.userId = ?',
-      [userId]
+      `SELECT 
+        s.id,
+        s.nameKey,
+        s.categoryId,
+        COALESCE(t.name, s.nameKey) as name
+      FROM subcategories s
+      INNER JOIN categories c ON s.categoryId = c.id
+      LEFT JOIN translations t ON t.entityType = 'subcategory' 
+        AND t.entityId = s.id 
+        AND t.language = ?
+      WHERE c.isSystem = TRUE OR c.userId = ?`,
+      [language, userId]
     );
     
-    // Создаем мапу подкатегорий по имени
+    // Создаем мапу подкатегорий по nameKey и по имени
     const subcategoriesMap = {};
     for (const sub of subcategoryRows) {
-      subcategoriesMap[sub.name] = sub;
+      subcategoriesMap[sub.nameKey] = sub;
+      subcategoriesMap[sub.name] = sub; // Для обратной совместимости
+      subcategoriesMap[sub.name.toLowerCase()] = sub;
     }
     
     console.log(`   Найдено категорий: ${categoryRows.length}`);

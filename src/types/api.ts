@@ -274,22 +274,25 @@ export interface UpdateGoalResponse extends ApiResponse<GoalDTO> {}
 // ============================================================================
 
 export interface CategoryDTO {
-  id: string;
-  name: string;
+  id: string; // UUID категории
+  nameKey: string; // Ключ для переводов (например, 'category.food')
+  name: string; // Переведенное название (из translations)
   icon?: string;
   isSystem: boolean;
   subcategories?: SubcategoryDTO[];
 }
 
 export interface SubcategoryDTO {
-  id: string;
-  categoryId: string;
-  name: string;
+  id: string; // UUID подкатегории
+  categoryId: string; // UUID категории
+  nameKey: string; // Ключ для переводов (например, 'subcategory.groceries')
+  name: string; // Переведенное название (из translations)
   icon?: string;
 }
 
 export interface GetCategoriesQuery {
   type?: 'income' | 'expense';
+  language?: string; // ISO 639-1 код языка (ru, en, etc.), по умолчанию 'ru'
 }
 
 export interface GetCategoriesResponse extends ApiResponse<CategoryDTO[]> {}

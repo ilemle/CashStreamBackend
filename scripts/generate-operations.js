@@ -94,24 +94,37 @@ function formatDateForMySQL(date) {
 }
 
 // Генерация случайной операции
-function generateOperation(userId, startDate, endDate) {
+function generateOperation(userId, startDate, endDate, categoriesMap, subcategoriesMap) {
   const type = Math.random() < 0.85 ? 'expense' : (Math.random() < 0.9 ? 'income' : 'transfer');
   
-  let category, title, amount;
+  let categoryId, subcategoryId, title, amount;
   
   if (type === 'expense') {
     const categoryData = getRandomItem(EXPENSE_CATEGORIES);
-    const subcategory = Math.random() < 0.7 ? getRandomItem(categoryData.subcategories) : null;
-    category = subcategory ? `${categoryData.name} > ${subcategory}` : categoryData.name;
+    const categoryInfo = categoriesMap[categoryData.name];
+    categoryId = categoryInfo ? categoryInfo.id : null;
+    
+    if (categoryId && Math.random() < 0.7) {
+      const subcategoryName = getRandomItem(categoryData.subcategories);
+      const subcategoryInfo = subcategoriesMap[subcategoryName];
+      subcategoryId = subcategoryInfo && subcategoryInfo.categoryId === categoryId ? subcategoryInfo.id : null;
+    } else {
+      subcategoryId = null;
+    }
+    
     title = getRandomItem(EXPENSE_TITLES);
     amount = -Math.abs(getRandomNumber(100, 50000)); // Отрицательное число для расходов
   } else if (type === 'income') {
-    category = getRandomItem(INCOME_CATEGORIES);
+    const categoryName = getRandomItem(INCOME_CATEGORIES);
+    const categoryInfo = categoriesMap[categoryName];
+    categoryId = categoryInfo ? categoryInfo.id : null;
+    subcategoryId = null;
     title = getRandomItem(INCOME_TITLES);
     amount = Math.abs(getRandomNumber(5000, 200000)); // Положительное число для доходов
   } else {
     // transfer
-    category = 'Переводы';
+    categoryId = null;
+    subcategoryId = null;
     title = 'Перевод между счетами';
     amount = Math.abs(getRandomNumber(1000, 50000));
   }
@@ -124,10 +137,9 @@ function generateOperation(userId, startDate, endDate) {
     id: uuidv4(),
     userId,
     title,
-    titleKey: null,
     amount,
-    category,
-    categoryKey: null,
+    categoryId,
+    subcategoryId,
     date: formatDateForMySQL(date),
     timestamp,
     type,
@@ -166,15 +178,44 @@ async function generateOperations(userId, count = 50, daysBack = 90) {
     console.log(`   Количество операций: ${count}`);
     console.log(`   Период: последние ${daysBack} дней\n`);
 
+    // Получаем категории из базы данных
+    console.log('📂 Загрузка категорий из базы данных...');
+    const [categoryRows] = await connection.execute(
+      'SELECT id, name FROM categories WHERE isSystem = TRUE OR userId = ?',
+      [userId]
+    );
+    
+    // Создаем мапу категорий по имени
+    const categoriesMap = {};
+    for (const cat of categoryRows) {
+      categoriesMap[cat.name] = cat;
+    }
+    
+    // Получаем подкатегории
+    const [subcategoryRows] = await connection.execute(
+      'SELECT s.id, s.name, s.categoryId FROM subcategories s INNER JOIN categories c ON s.categoryId = c.id WHERE c.isSystem = TRUE OR c.userId = ?',
+      [userId]
+    );
+    
+    // Создаем мапу подкатегорий по имени
+    const subcategoriesMap = {};
+    for (const sub of subcategoryRows) {
+      subcategoriesMap[sub.name] = sub;
+    }
+    
+    console.log(`   Найдено категорий: ${categoryRows.length}`);
+    console.log(`   Найдено подкатегорий: ${subcategoryRows.length}\n`);
+
     // Вычисляем диапазон дат
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysBack);
 
     // Генерируем операции
+    console.log('🔄 Генерация операций...');
     const operations = [];
     for (let i = 0; i < count; i++) {
-      operations.push(generateOperation(userId, startDate, endDate));
+      operations.push(generateOperation(userId, startDate, endDate, categoriesMap, subcategoriesMap));
     }
 
     // Сортируем по дате (от старых к новым)
@@ -189,17 +230,16 @@ async function generateOperations(userId, count = 50, daysBack = 90) {
       try {
         await connection.execute(
           `INSERT INTO operations (
-            id, userId, title, titleKey, amount, category, categoryKey, 
+            id, userId, title, amount, categoryId, subcategoryId, 
             date, timestamp, type, fromAccount, toAccount, currency
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             op.id,
             op.userId,
             op.title,
-            op.titleKey,
             op.amount,
-            op.category,
-            op.categoryKey,
+            op.categoryId,
+            op.subcategoryId,
             op.date,
             op.timestamp,
             op.type,

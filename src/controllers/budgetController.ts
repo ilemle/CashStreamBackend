@@ -12,7 +12,12 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const budgetData = { ...req.body, userId: req.user?.id || '' };
+    // Преобразуем undefined в null для всех полей
+    const cleanBody = Object.fromEntries(
+      Object.entries(req.body).map(([key, value]) => [key, value ?? null])
+    );
+
+    const budgetData = { ...cleanBody, userId: req.user?.id || '' };
     const budget = await Budget.create(budgetData as IBudget);
     res.status(201).json({ success: true, data: budget });
   } catch (err: any) {
@@ -33,7 +38,12 @@ export const updateBudget = async (req: Request, res: Response, _next: NextFunct
       return;
     }
     
-    const budget = await Budget.findByIdAndUpdate(req.params.id, req.body);
+    // Преобразуем undefined в null для всех полей
+    const cleanBody = Object.fromEntries(
+      Object.entries(req.body).map(([key, value]) => [key, value ?? null])
+    );
+
+    const budget = await Budget.findByIdAndUpdate(req.params.id, cleanBody);
     res.status(200).json({ success: true, data: budget });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

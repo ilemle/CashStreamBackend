@@ -41,9 +41,20 @@ class BudgetModel {
 
   static async create(data: IBudget): Promise<IBudget> {
     const id = uuidv4();
+
+    // Преобразуем undefined в null
+    const safeData = {
+      categoryId: data.categoryId || null,
+      category: data.category || null,
+      spent: data.spent ?? null,
+      budget: data.budget ?? null,
+      color: data.color || null,
+      userId: data.userId || null,
+    };
+
     await pool.execute(
       'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
+      [id, safeData.categoryId, safeData.category, safeData.spent, safeData.budget, safeData.color, safeData.userId]
     );
     return this.transformBudget({ ...data, id });
   }
@@ -55,9 +66,14 @@ class BudgetModel {
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && key !== 'id' && key !== 'userId') {
         sets.push(`${key} = ?`);
-        values.push(value);
+        // Преобразуем undefined в null для SQL
+        values.push(value ?? null);
       }
     });
+
+    if (sets.length === 0) {
+      return this.findById(id);
+    }
 
     values.push(id);
     await pool.execute(

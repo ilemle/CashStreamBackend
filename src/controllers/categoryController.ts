@@ -34,6 +34,7 @@ export const getCategories = async (req: Request, res: Response, _next: NextFunc
       success: true,
       data: categoriesWithSubcategories
     });
+    return;
 
   } catch (error: any) {
     console.error('❌ Error getting categories:', error);
@@ -41,6 +42,7 @@ export const getCategories = async (req: Request, res: Response, _next: NextFunc
       success: false,
       message: 'Failed to get categories'
     });
+    return;
   }
 };
 
@@ -50,10 +52,11 @@ export const createCategory = async (req: Request, res: Response, _next: NextFun
     const { name, icon } = req.body;
 
     if (!name) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Category name is required'
       });
+      return;
     }
 
     // Проверяем, не существует ли уже категория с таким именем
@@ -63,10 +66,11 @@ export const createCategory = async (req: Request, res: Response, _next: NextFun
     );
 
     if ((existingResult as any[]).length > 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Category with this name already exists'
       });
+      return;
     }
 
     const [result] = await pool.execute(
@@ -87,6 +91,7 @@ export const createCategory = async (req: Request, res: Response, _next: NextFun
         subcategories: []
       }
     });
+    return;
 
   } catch (error: any) {
     console.error('❌ Error creating category:', error);
@@ -94,6 +99,7 @@ export const createCategory = async (req: Request, res: Response, _next: NextFun
       success: false,
       message: 'Failed to create category'
     });
+    return;
   }
 };
 
@@ -103,10 +109,11 @@ export const createSubcategory = async (req: Request, res: Response, _next: Next
     const { categoryId, name, icon } = req.body;
 
     if (!categoryId || !name) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'CategoryId and name are required'
       });
+      return;
     }
 
     // Проверяем, что категория существует и доступна пользователю
@@ -116,10 +123,11 @@ export const createSubcategory = async (req: Request, res: Response, _next: Next
     );
 
     if ((categoryResult as any[]).length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Category not found'
       });
+      return;
     }
 
     // Проверяем, не существует ли уже подкатегория с таким именем в этой категории
@@ -129,10 +137,11 @@ export const createSubcategory = async (req: Request, res: Response, _next: Next
     );
 
     if ((existingResult as any[]).length > 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Subcategory with this name already exists in this category'
       });
+      return;
     }
 
     const [result] = await pool.execute(
@@ -151,6 +160,7 @@ export const createSubcategory = async (req: Request, res: Response, _next: Next
         icon: icon || null
       }
     });
+    return;
 
   } catch (error: any) {
     console.error('❌ Error creating subcategory:', error);
@@ -158,6 +168,7 @@ export const createSubcategory = async (req: Request, res: Response, _next: Next
       success: false,
       message: 'Failed to create subcategory'
     });
+    return;
   }
 };
 

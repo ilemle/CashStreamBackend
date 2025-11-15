@@ -13,6 +13,8 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    console.log('📊 Create budget request body:', req.body);
+    console.log('📊 CategoryId received:', req.body.categoryId, 'type:', typeof req.body.categoryId);
     console.log('📊 Creating budget - raw request body:', req.body);
     console.log('📊 User from token:', req.user);
 

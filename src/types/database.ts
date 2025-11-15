@@ -45,7 +45,7 @@ export interface OperationTable {
 // ============================================================================
 export interface CategoryTable {
   id: number; // INT AUTO_INCREMENT PRIMARY KEY
-  name: string; // VARCHAR(255) NOT NULL (название категории)
+  name: string; // VARCHAR(255) NOT NULL (прямое название категории)
   icon: string | null; // VARCHAR(100)
   isSystem: boolean; // BOOLEAN DEFAULT FALSE
   userId: string | null; // VARCHAR(36) (NULL для системных категорий)
@@ -56,9 +56,9 @@ export interface CategoryTable {
 // SUBCATEGORIES TABLE
 // ============================================================================
 export interface SubcategoryTable {
-  id: string; // VARCHAR(36) PRIMARY KEY (строковый ID)
+  id: number; // INT AUTO_INCREMENT PRIMARY KEY
   categoryId: number; // INT NOT NULL (ссылка на categories.id)
-  name: string; // VARCHAR(255) NOT NULL (название подкатегории)
+  name: string; // VARCHAR(255) NOT NULL (прямое название подкатегории)
   icon: string | null; // VARCHAR(100)
   createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 }

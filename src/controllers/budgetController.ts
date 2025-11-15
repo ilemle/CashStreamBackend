@@ -12,15 +12,23 @@ export const getBudgets = async (req: Request, res: Response, _next: NextFunctio
 
 export const createBudget = async (req: Request, res: Response, _next: NextFunction) => {
   try {
+    console.log('💰 Create budget request body:', req.body);
+    console.log('💰 User from token:', req.user);
+
     // Преобразуем undefined в null для всех полей
     const cleanBody = Object.fromEntries(
       Object.entries(req.body).map(([key, value]) => [key, value ?? null])
     );
 
+    console.log('💰 Clean body:', cleanBody);
+
     const budgetData = { ...cleanBody, userId: req.user?.id || '' };
+    console.log('💰 Final budget data:', budgetData);
+
     const budget = await Budget.create(budgetData as IBudget);
     res.status(201).json({ success: true, data: budget });
   } catch (err: any) {
+    console.error('💰 Create budget error:', err);
     res.status(400).json({ success: false, message: err.message });
   }
 };

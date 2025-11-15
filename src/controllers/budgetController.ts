@@ -18,6 +18,32 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
     console.log('📊 Creating budget - raw request body:', req.body);
     console.log('📊 User from token:', req.user);
 
+    // Проверяем, существует ли пользователь
+    const User = (await import('../models/User')).default;
+    const existingUser = await User.findById(req.user?.id);
+    console.log('📊 User exists in database:', !!existingUser);
+    if (existingUser) {
+      console.log('📊 User details:', { id: existingUser.id, username: existingUser.username, email: existingUser.email });
+    } else {
+      console.log('❌ User not found in database! This is the problem.');
+    }
+
+    // Проверяем, существует ли категория
+    const pool = (await import('../config/database')).pool;
+    try {
+      const [categoryRows] = await pool.execute('SELECT id, name FROM categories WHERE id = ?', [req.body.categoryId]);
+      console.log('📊 Category exists in database:', categoryRows.length > 0);
+      if (categoryRows.length > 0) {
+        console.log('📊 Category details:', categoryRows[0]);
+      } else {
+        console.log('❌ Category not found in database! Available categories:');
+        const [allCategories] = await pool.execute('SELECT id, name FROM categories ORDER BY id');
+        console.log('📊 All categories:', allCategories);
+      }
+    } catch (categoryError: any) {
+      console.error('❌ Error checking category:', categoryError.message);
+    }
+
     // Преобразуем undefined в null для SQL
     const rawData = req.body;
     const budgetData: CreateBudgetRequest & { userId: string } = {

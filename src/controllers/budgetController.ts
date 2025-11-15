@@ -21,8 +21,13 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
 
     // Проверяем, существует ли пользователь
     const { default: User } = await import('../models/User');
-    console.log('📊 Checking user with ID:', req.user?.id);
-    const existingUser = await User.findById(req.user?.id);
+    const userId = req.user?.id;
+    if (!userId) {
+      console.log('❌ No user ID in token');
+      return;
+    }
+    console.log('📊 Checking user with ID:', userId);
+    const existingUser = await User.findById(userId);
     console.log('📊 User exists in database:', !!existingUser);
     if (existingUser) {
       console.log('📊 User details:', { id: existingUser.id, username: existingUser.username, email: existingUser.email });
@@ -33,13 +38,15 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
     // Проверяем, существует ли категория
     const { pool } = await import('../config/database');
     try {
-      const [categoryRows] = await pool.execute('SELECT id, name FROM categories WHERE id = ?', [req.body.categoryId]);
+      const [categoryResult] = await pool.execute('SELECT id, name FROM categories WHERE id = ?', [req.body.categoryId]);
+      const categoryRows = categoryResult as any[];
       console.log('📊 Category exists in database:', categoryRows.length > 0);
       if (categoryRows.length > 0) {
         console.log('📊 Category details:', categoryRows[0]);
       } else {
         console.log('❌ Category not found in database! Available categories:');
-        const [allCategories] = await pool.execute('SELECT id, name FROM categories ORDER BY id');
+        const [allCategoriesResult] = await pool.execute('SELECT id, name FROM categories ORDER BY id');
+        const allCategories = allCategoriesResult as any[];
         console.log('📊 All categories:', allCategories);
       }
     } catch (categoryError: any) {
@@ -54,7 +61,7 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
       spent: rawData.spent ?? 0,
       budget: rawData.budget || 0,
       color: rawData.color || '',
-      userId: req.user?.id || ''
+      userId: userId
     };
 
     console.log('📊 Processed budget data:', budgetData);

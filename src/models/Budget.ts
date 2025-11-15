@@ -30,12 +30,29 @@ class BudgetModel {
   }
 
   static async create(data: CreateBudgetRequest & { userId: string }): Promise<BudgetDTO> {
+    console.log('📊 BudgetModel.create called with:', data);
     const id = uuidv4();
-    await pool.execute(
-      'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
-    );
-    return this.transformBudget({ ...data, id });
+    console.log('📊 Generated budget ID:', id);
+    console.log('📊 Executing SQL INSERT with params:', [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]);
+
+    try {
+      await pool.execute(
+        'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
+      );
+      console.log('📊 SQL INSERT executed successfully');
+      const result = this.transformBudget({ ...data, id });
+      console.log('📊 Budget created and transformed:', result);
+      return result;
+    } catch (sqlError: any) {
+      console.error('📊 SQL INSERT failed:', sqlError.message);
+      console.error('📊 SQL Error details:', {
+        code: sqlError.code,
+        errno: sqlError.errno,
+        sqlState: sqlError.sqlState
+      });
+      throw sqlError;
+    }
   }
 
   static async findByIdAndUpdate(id: string, data: UpdateBudgetRequest): Promise<BudgetDTO | null> {

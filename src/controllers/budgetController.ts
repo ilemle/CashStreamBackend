@@ -17,9 +17,11 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
     console.log('📊 CategoryId received:', req.body.categoryId, 'type:', typeof req.body.categoryId);
     console.log('📊 Creating budget - raw request body:', req.body);
     console.log('📊 User from token:', req.user);
+    console.log('📊 About to check user existence...');
 
     // Проверяем, существует ли пользователь
-    const User = (await import('../models/User')).default;
+    const { default: User } = await import('../models/User');
+    console.log('📊 Checking user with ID:', req.user?.id);
     const existingUser = await User.findById(req.user?.id);
     console.log('📊 User exists in database:', !!existingUser);
     if (existingUser) {
@@ -29,7 +31,7 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
     }
 
     // Проверяем, существует ли категория
-    const pool = (await import('../config/database')).pool;
+    const { pool } = await import('../config/database');
     try {
       const [categoryRows] = await pool.execute('SELECT id, name FROM categories WHERE id = ?', [req.body.categoryId]);
       console.log('📊 Category exists in database:', categoryRows.length > 0);
@@ -65,7 +67,9 @@ export const createBudget = async (req: Request, res: Response, _next: NextFunct
       });
     }
 
+    console.log('📊 About to create budget in database:', budgetData);
     const budget = await Budget.create(budgetData);
+    console.log('📊 Budget created successfully:', budget);
     res.status(201).json({ success: true, data: budget });
     return;
   } catch (err: any) {

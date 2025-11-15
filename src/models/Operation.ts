@@ -1,10 +1,30 @@
 import { pool } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
-import { OperationDTO, CreateOperationRequest } from '../types/database';
+
+export interface IOperation {
+  id?: string;
+  title: string;
+  amount: number;
+  categoryId: string | null;
+  subcategoryId?: string | null;
+  date: Date | string;
+  timestamp?: number;
+  type: 'income' | 'expense' | 'transfer';
+  // Для переводов (transfer)
+  fromAccount?: string;
+  toAccount?: string;
+  currency?: string;  // Валюта операции (RUB, USD, EUR и т.д.)
+  userId: string;
+  created_at?: Date;
+  // Названия категорий (получаются через JOIN, не сохраняются в БД)
+  categoryName?: string;
+  subcategoryName?: string;
+  category?: string; // Полный путь "Категория > Подкатегория" (вычисляемое поле)
+}
 
 class OperationModel {
   // Вспомогательная функция для преобразования DECIMAL строк в числа
-  private static transformOperation(operation: any): OperationDTO {
+  private static transformOperation(operation: any): IOperation {
     return {
       ...operation,
       amount: Number(operation.amount),
@@ -12,7 +32,7 @@ class OperationModel {
     };
   }
 
-  static async find(filter: any): Promise<OperationDTO[]> {
+  static async find(filter: any): Promise<IOperation[]> {
     if (!pool) {
       throw new Error('Database pool is not initialized');
     }
@@ -93,7 +113,7 @@ class OperationModel {
     return (rows as any[])[0]?.count || 0;
   }
 
-  static async findById(id: string, language: string = 'ru'): Promise<OperationDTO | null> {
+  static async findById(id: string, language: string = 'ru'): Promise<IOperation | null> {
     const [rows] = await pool.execute(
       `SELECT 
         o.*,
@@ -119,7 +139,7 @@ class OperationModel {
     return ops[0] ? this.transformOperation(ops[0]) : null;
   }
 
-  static async create(data: CreateOperationRequest & { userId: string }, language: string = 'ru'): Promise<OperationDTO> {
+  static async create(data: IOperation, language: string = 'ru'): Promise<IOperation> {
     const id = uuidv4();
     
     const insertValues = [
@@ -150,28 +170,19 @@ class OperationModel {
     return this.transformOperation({ ...data, id });
   }
 
-  static async findByIdAndUpdate(id: string, data: Partial<CreateOperationRequest>, language: string = 'ru'): Promise<OperationDTO | null> {
-    console.log('🔧 Operation.findByIdAndUpdate called with:', { id, data, dataKeys: Object.keys(data) });
-
+  static async findByIdAndUpdate(id: string, data: Partial<IOperation>, language: string = 'ru'): Promise<IOperation | null> {
     const sets: string[] = [];
     const values: any[] = [];
 
     // Поля, которые нельзя обновлять (вычисляемые или системные)
-    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType', 'categoryName', 'subcategoryName', 'category', '_id'];
+    const excludedFields = ['id', 'userId', 'convertedAmount', 'convertedCurrency', 'convertedCurrencyCode', 'itemType', 'categoryName', 'subcategoryName', 'category'];
 
     Object.entries(data).forEach(([key, value]) => {
-      console.log(`🔧 Processing field: ${key} = ${value} (type: ${typeof value})`);
       if (value !== undefined && !excludedFields.includes(key)) {
         sets.push(`${key} = ?`);
         values.push(value);
-        console.log(`🔧 Adding to SQL: ${key} = ? with value: ${value}`);
-      } else {
-        console.log(`🔧 Skipping field: ${key} (excluded or undefined)`);
       }
     });
-
-    console.log('🔧 Generated SQL sets:', sets);
-    console.log('🔧 SQL values:', values);
 
     if (sets.length === 0) {
       return this.findById(id, language);
@@ -190,7 +201,7 @@ class OperationModel {
     await pool.execute('DELETE FROM operations WHERE id = ?', [id]);
   }
 
-  static async createMany(operations: (CreateOperationRequest & { userId: string })[], language: string = 'ru'): Promise<OperationDTO[]> {
+  static async createMany(operations: IOperation[], language: string = 'ru'): Promise<IOperation[]> {
     if (operations.length === 0) {
       return [];
     }
@@ -200,7 +211,7 @@ class OperationModel {
     try {
       await connection.beginTransaction();
 
-      const createdOperations: OperationDTO[] = [];
+      const createdOperations: IOperation[] = [];
 
       for (const data of operations) {
         const id = uuidv4();

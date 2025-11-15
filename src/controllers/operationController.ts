@@ -1,12 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import Operation from '../models/Operation';
+import Operation, { IOperation } from '../models/Operation';
 import Budget from '../models/Budget';
 import Goal from '../models/Goal';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
-import { CreateOperationRequest } from '../types/database';
 
 // Вспомогательная функция для обновления бюджета
-async function updateBudgetSpent(userId: string, categoryId: number | null, amount: number, operation: 'add' | 'subtract') {
+async function updateBudgetSpent(userId: string, categoryId: string | null, amount: number, operation: 'add' | 'subtract') {
   try {
     if (!categoryId) {
       console.log(`⚠️ No categoryId provided, skipping budget update`);
@@ -262,10 +261,10 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
 export const createOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
-    const opData: CreateOperationRequest & { userId: string } = {
+    const opData: IOperation = {
       title: req.body.title,
       amount: req.body.amount,
-      categoryId: req.body.categoryId !== undefined ? Number(req.body.categoryId) : null,
+      categoryId: req.body.categoryId !== undefined ? req.body.categoryId : null,
       subcategoryId: req.body.subcategoryId !== undefined ? req.body.subcategoryId : null,
       date: req.body.date || new Date(),
       timestamp: req.body.timestamp !== undefined ? req.body.timestamp : undefined,
@@ -296,12 +295,6 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
 
 export const updateOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    console.log('📝 Update operation request:', {
-      params: req.params,
-      body: req.body,
-      bodyKeys: Object.keys(req.body)
-    });
-
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
     // Проверяем существование и владельца
     const existingOp = await Operation.findById(req.params.id, language);
@@ -337,19 +330,8 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
       console.log(`⚠️ Operation type changed from income to ${newType}, goals were auto-filled and cannot be automatically reverted`);
     }
     
-    // Преобразуем undefined в null для SQL и конвертируем типы
-    const updateData = Object.fromEntries(
-      Object.entries(req.body).map(([key, value]) => {
-        if (key === 'categoryId' && value !== undefined && value !== null) {
-          // Конвертируем categoryId в number
-          return [key, Number(value)];
-        }
-        return [key, value === undefined ? null : value];
-      })
-    );
-
     // Обновляем операцию
-    const op = await Operation.findByIdAndUpdate(req.params.id, updateData, language);
+    const op = await Operation.findByIdAndUpdate(req.params.id, req.body, language);
     
     // Добавляем новую операцию в бюджет (если расход)
     if (newType === 'expense' && newCategoryId && existingOp.userId) {
@@ -399,7 +381,7 @@ export const getBalance = async (req: Request, res: Response) => {
   try {
     const ops = await Operation.find({ userId: req.user?.id || '' });
     const balance = ops.reduce((sum, op) => sum + Number(op.amount), 0);
-    const balanceWithConversion = await addCurrencyConversion({ amount: balance, currency: 'RUB' }, req);
+    const balanceWithConversion = await addCurrencyConversion({ amount: balance } as IOperation, req);
     
     res.status(200).json({ 
       success: true, 
@@ -443,10 +425,10 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     console.log(`📦 Creating batch of ${operations.length} operations for userId: ${req.user?.id}`);
 
     // Подготавливаем данные для создания
-    const operationsData: (CreateOperationRequest & { userId: string })[] = operations.map((op: any) => ({
+    const operationsData: IOperation[] = operations.map((op: any) => ({
       title: op.title,
       amount: op.amount,
-      categoryId: op.categoryId !== undefined ? Number(op.categoryId) : null,
+      categoryId: op.categoryId || null,
       subcategoryId: op.subcategoryId || null,
       date: op.date,
       timestamp: op.timestamp || undefined,

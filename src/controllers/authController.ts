@@ -196,9 +196,7 @@ export const verifyEmailAndRegister = async (req: Request, res: Response, _next:
     console.log('✅ Пользователь создан:', {
       id: user.id,
       username: user.username,
-      email: user.email,
-      idType: typeof user.id,
-      idLength: user.id?.length
+      email: user.email
     });
 
     console.log('💾 Отмечаем код как использованный...');

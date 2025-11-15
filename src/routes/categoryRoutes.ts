@@ -1,8 +1,10 @@
 import express from 'express';
 import {
   getCategories,
-  createCategory,
-  createSubcategory,
+  createUserCategory,
+  addSubcategory,
+  deleteUserCategory,
+  deleteSubcategory,
 } from '../controllers/categoryController';
 import { protect } from '../middleware/auth';
 
@@ -12,10 +14,16 @@ const router = express.Router();
 router.get('/', protect, getCategories);
 
 // Создать пользовательскую категорию
-router.post('/', protect, createCategory);
+router.post('/', protect, createUserCategory);
 
-// Создать подкатегорию
-router.post('/subcategories', protect, createSubcategory);
+// Добавить подкатегорию к категории
+router.post('/:categoryId/subcategories', protect, addSubcategory);
+
+// Удалить пользовательскую категорию
+router.delete('/:categoryId', protect, deleteUserCategory);
+
+// Удалить подкатегорию
+router.delete('/subcategories/:subcategoryId', protect, deleteSubcategory);
 
 export default router;
 

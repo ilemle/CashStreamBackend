@@ -1,10 +1,20 @@
 import { pool } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
-import { BudgetDTO, CreateBudgetRequest, UpdateBudgetRequest } from '../types/database';
+
+export interface IBudget {
+  id?: string;
+  categoryId: string; // ID категории
+  category: string; // Название категории (кэш для быстрого доступа)
+  spent: number;
+  budget: number;
+  color: string;
+  userId: string;
+  created_at?: Date;
+}
 
 class BudgetModel {
   // Вспомогательная функция для преобразования DECIMAL строк в числа
-  private static transformBudget(budget: any): BudgetDTO {
+  private static transformBudget(budget: any): IBudget {
     return {
       ...budget,
       spent: Number(budget.spent),
@@ -12,7 +22,7 @@ class BudgetModel {
     };
   }
 
-  static async find(filter: { userId: string }): Promise<BudgetDTO[]> {
+  static async find(filter: { userId: string }): Promise<IBudget[]> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE userId = ?',
       [filter.userId]
@@ -20,7 +30,7 @@ class BudgetModel {
     return (rows as any[]).map(this.transformBudget);
   }
 
-  static async findById(id: string): Promise<BudgetDTO | null> {
+  static async findById(id: string): Promise<IBudget | null> {
     const [rows] = await pool.execute(
       'SELECT * FROM budgets WHERE id = ?',
       [id]
@@ -29,33 +39,16 @@ class BudgetModel {
     return budgets[0] ? this.transformBudget(budgets[0]) : null;
   }
 
-  static async create(data: CreateBudgetRequest & { userId: string }): Promise<BudgetDTO> {
-    console.log('📊 BudgetModel.create called with:', data);
+  static async create(data: IBudget): Promise<IBudget> {
     const id = uuidv4();
-    console.log('📊 Generated budget ID:', id);
-    console.log('📊 Executing SQL INSERT with params:', [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]);
-
-    try {
-      await pool.execute(
-        'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
-      );
-      console.log('📊 SQL INSERT executed successfully');
-      const result = this.transformBudget({ ...data, id });
-      console.log('📊 Budget created and transformed:', result);
-      return result;
-    } catch (sqlError: any) {
-      console.error('📊 SQL INSERT failed:', sqlError.message);
-      console.error('📊 SQL Error details:', {
-        code: sqlError.code,
-        errno: sqlError.errno,
-        sqlState: sqlError.sqlState
-      });
-      throw sqlError;
-    }
+    await pool.execute(
+      'INSERT INTO budgets (id, categoryId, category, spent, budget, color, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, data.categoryId, data.category, data.spent, data.budget, data.color, data.userId]
+    );
+    return this.transformBudget({ ...data, id });
   }
 
-  static async findByIdAndUpdate(id: string, data: UpdateBudgetRequest): Promise<BudgetDTO | null> {
+  static async findByIdAndUpdate(id: string, data: Partial<IBudget>): Promise<IBudget | null> {
     const sets: string[] = [];
     const values: any[] = [];
 

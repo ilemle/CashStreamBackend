@@ -30,7 +30,7 @@ export interface OperationTable {
   type: OperationType; // ENUM('income', 'expense', 'transfer') NOT NULL
   amount: number; // DECIMAL(15, 2) NOT NULL
   currency: string; // VARCHAR(10) DEFAULT 'RUB'
-  categoryId: string | null; // VARCHAR(36) NULL, FK → categories.id
+  categoryId: number | null; // INT NULL, FK → categories.id
   subcategoryId: string | null; // VARCHAR(36) NULL, FK → subcategories.id
   fromAccount: string | null; // VARCHAR(255) NULL (для переводов)
   toAccount: string | null; // VARCHAR(255) NULL (для переводов)
@@ -44,8 +44,8 @@ export interface OperationTable {
 // CATEGORIES TABLE
 // ============================================================================
 export interface CategoryTable {
-  id: string; // CHAR(36) PRIMARY KEY (UUID)
-  nameKey: string; // VARCHAR(255) NOT NULL UNIQUE (ключ для переводов, например 'category.food')
+  id: number; // INT AUTO_INCREMENT PRIMARY KEY
+  name: string; // VARCHAR(255) NOT NULL (название категории)
   icon: string | null; // VARCHAR(100)
   isSystem: boolean; // BOOLEAN DEFAULT FALSE
   userId: string | null; // VARCHAR(36) (NULL для системных категорий)
@@ -56,9 +56,9 @@ export interface CategoryTable {
 // SUBCATEGORIES TABLE
 // ============================================================================
 export interface SubcategoryTable {
-  id: string; // CHAR(36) PRIMARY KEY (UUID)
-  categoryId: string; // CHAR(36) NOT NULL
-  nameKey: string; // VARCHAR(255) NOT NULL UNIQUE (ключ для переводов, например 'subcategory.groceries')
+  id: string; // VARCHAR(36) PRIMARY KEY (строковый ID)
+  categoryId: number; // INT NOT NULL (ссылка на categories.id)
+  name: string; // VARCHAR(255) NOT NULL (название подкатегории)
   icon: string | null; // VARCHAR(100)
   createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 }
@@ -81,7 +81,7 @@ export interface TranslationTable {
 // ============================================================================
 export interface BudgetTable {
   id: string; // VARCHAR(36) PRIMARY KEY
-  categoryId: string; // VARCHAR(36) NOT NULL, FK → categories.id
+  categoryId: number; // INT NOT NULL, FK → categories.id
   category: string; // VARCHAR(255) NOT NULL (кэш названия для быстрого доступа)
   spent: number; // DECIMAL(15, 2) DEFAULT 0
   budget: number; // DECIMAL(15, 2) NOT NULL
@@ -185,7 +185,7 @@ export interface OperationDTO extends OperationTable {
 export interface CreateOperationRequest {
   title: string;
   amount: number;
-  categoryId?: string | null;
+  categoryId?: number | null;
   subcategoryId?: string | null;
   date?: Date | string;
   timestamp?: number;
@@ -207,7 +207,7 @@ export interface BudgetDTO extends BudgetTable {
 
 // Запрос на создание бюджета
 export interface CreateBudgetRequest {
-  categoryId: string;
+  categoryId: number;
   category: string;
   spent?: number;
   budget: number;

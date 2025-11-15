@@ -3,7 +3,7 @@
 
 -- Таблица категорий
 CREATE TABLE IF NOT EXISTS categories (
-  id VARCHAR(36) PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   icon VARCHAR(100),
   isSystem BOOLEAN DEFAULT FALSE,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- Таблица подкатегорий
 CREATE TABLE IF NOT EXISTS subcategories (
   id VARCHAR(36) PRIMARY KEY,
-  categoryId VARCHAR(36) NOT NULL,
+  categoryId INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   icon VARCHAR(100),
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -26,120 +26,120 @@ CREATE TABLE IF NOT EXISTS subcategories (
 );
 
 -- Вставить системные категории для трат
-INSERT INTO categories (id, name, icon, isSystem) VALUES
-('food', 'Еда и напитки', 'restaurant', TRUE),
-('transport', 'Транспорт', 'directions-car', TRUE),
-('shopping', 'Покупки', 'shopping-cart', TRUE),
-('utilities', 'Коммунальные услуги', 'home', TRUE),
-('health', 'Здоровье', 'favorite', TRUE),
-('entertainment', 'Развлечения', 'sports-esports', TRUE),
-('education', 'Образование', 'school', TRUE),
-('bills', 'Счета', 'receipt', TRUE),
-('personal', 'Личное', 'person', TRUE),
-('travel', 'Путешествия', 'flight', TRUE)
+INSERT INTO categories (name, icon, isSystem) VALUES
+('Еда и напитки', 'restaurant', TRUE),         -- id = 1
+('Транспорт', 'directions-car', TRUE),          -- id = 2
+('Покупки', 'shopping-cart', TRUE),             -- id = 3
+('Коммунальные услуги', 'home', TRUE),          -- id = 4
+('Здоровье', 'favorite', TRUE),                  -- id = 5
+('Развлечения', 'sports-esports', TRUE),         -- id = 6
+('Образование', 'school', TRUE),                 -- id = 7
+('Счета', 'receipt', TRUE),                      -- id = 8
+('Личное', 'person', TRUE),                      -- id = 9
+('Путешествия', 'flight', TRUE)                  -- id = 10
+ON DUPLICATE KEY UPDATE name=name;
+
+-- Вставить подкатегории для "Еда и напитки" (id = 1)
+INSERT INTO subcategories (id, categoryId, name) VALUES
+('groceries', 1, 'Продукты'),
+('restaurant', 1, 'Рестораны'),
+('cafe', 1, 'Кафе'),
+('alcohol', 1, 'Алкоголь'),
+('snacks', 1, 'Закуски'),
+('delivery', 1, 'Доставка еды')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Еда и напитки"
+-- Вставить подкатегории для "Транспорт" (id = 2)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('groceries', 'food', 'Продукты'),
-('restaurant', 'food', 'Рестораны'),
-('cafe', 'food', 'Кафе'),
-('alcohol', 'food', 'Алкоголь'),
-('snacks', 'food', 'Закуски'),
-('delivery', 'food', 'Доставка еды')
+('gas', 2, 'Бензин'),
+('parking', 2, 'Парковка'),
+('public_transport', 2, 'Общественный транспорт'),
+('taxi', 2, 'Такси'),
+('car_repair', 2, 'Ремонт авто'),
+('car_insurance', 2, 'Страховка авто')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Транспорт"
+-- Вставить подкатегории для "Покупки" (id = 3)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('gas', 'transport', 'Бензин'),
-('parking', 'transport', 'Парковка'),
-('public_transport', 'transport', 'Общественный транспорт'),
-('taxi', 'transport', 'Такси'),
-('car_repair', 'transport', 'Ремонт авто'),
-('car_insurance', 'transport', 'Страховка авто')
+('clothes', 3, 'Одежда'),
+('electronics', 3, 'Электроника'),
+('furniture', 3, 'Мебель'),
+('home_goods', 3, 'Товары для дома'),
+('books_shopping', 3, 'Книги'),
+('gifts', 3, 'Подарки')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Покупки"
+-- Вставить подкатегории для "Коммунальные услуги" (id = 4)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('clothes', 'shopping', 'Одежда'),
-('electronics', 'shopping', 'Электроника'),
-('furniture', 'shopping', 'Мебель'),
-('home_goods', 'shopping', 'Товары для дома'),
-('books_shopping', 'shopping', 'Книги'),
-('gifts', 'shopping', 'Подарки')
+('electricity', 4, 'Электричество'),
+('water', 4, 'Вода'),
+('gas_utilities', 4, 'Газ'),
+('internet', 4, 'Интернет'),
+('phone', 4, 'Телефон'),
+('heating', 4, 'Отопление')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Коммунальные услуги"
+-- Вставить подкатегории для "Здоровье" (id = 5)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('electricity', 'utilities', 'Электричество'),
-('water', 'utilities', 'Вода'),
-('gas_utilities', 'utilities', 'Газ'),
-('internet', 'utilities', 'Интернет'),
-('phone', 'utilities', 'Телефон'),
-('heating', 'utilities', 'Отопление')
+('pharmacy', 5, 'Аптека'),
+('doctor', 5, 'Врач'),
+('dentist', 5, 'Стоматолог'),
+('hospital', 5, 'Больница'),
+('insurance_health', 5, 'Страхование'),
+('fitness', 5, 'Фитнес')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Здоровье"
+-- Вставить подкатегории для "Развлечения" (id = 6)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('pharmacy', 'health', 'Аптека'),
-('doctor', 'health', 'Врач'),
-('dentist', 'health', 'Стоматолог'),
-('hospital', 'health', 'Больница'),
-('insurance_health', 'health', 'Страхование'),
-('fitness', 'health', 'Фитнес')
+('movies', 6, 'Кино'),
+('music', 6, 'Музыка'),
+('games', 6, 'Игры'),
+('hobbies', 6, 'Хобби'),
+('concerts', 6, 'Концерты'),
+('sports', 6, 'Спорт')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Развлечения"
+-- Вставить подкатегории для "Образование" (id = 7)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('movies', 'entertainment', 'Кино'),
-('music', 'entertainment', 'Музыка'),
-('games', 'entertainment', 'Игры'),
-('hobbies', 'entertainment', 'Хобби'),
-('concerts', 'entertainment', 'Концерты'),
-('sports', 'entertainment', 'Спорт')
+('courses', 7, 'Курсы'),
+('books_education', 7, 'Учебники'),
+('tuition', 7, 'Обучение'),
+('certification', 7, 'Сертификация'),
+('workshops', 7, 'Мастер-классы')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Образование"
+-- Вставить подкатегории для "Счета" (id = 8)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('courses', 'education', 'Курсы'),
-('books_education', 'education', 'Учебники'),
-('tuition', 'education', 'Обучение'),
-('certification', 'education', 'Сертификация'),
-('workshops', 'education', 'Мастер-классы')
+('credit_card', 8, 'Кредитная карта'),
+('loan', 8, 'Кредит'),
+('rent', 8, 'Аренда'),
+('subscriptions', 8, 'Подписки'),
+('services', 8, 'Услуги')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Счета"
+-- Вставить подкатегории для "Личное" (id = 9)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('credit_card', 'bills', 'Кредитная карта'),
-('loan', 'bills', 'Кредит'),
-('rent', 'bills', 'Аренда'),
-('subscriptions', 'bills', 'Подписки'),
-('services', 'bills', 'Услуги')
+('haircut', 9, 'Стрижка'),
+('beauty', 9, 'Красота'),
+('laundry', 9, 'Стирка'),
+('cleaning', 9, 'Уборка')
 ON DUPLICATE KEY UPDATE id=id;
 
--- Вставить подкатегории для "Личное"
+-- Вставить подкатегории для "Путешествия" (id = 10)
 INSERT INTO subcategories (id, categoryId, name) VALUES
-('haircut', 'personal', 'Стрижка'),
-('beauty', 'personal', 'Красота'),
-('laundry', 'personal', 'Стирка'),
-('cleaning', 'personal', 'Уборка')
-ON DUPLICATE KEY UPDATE id=id;
-
--- Вставить подкатегории для "Путешествия"
-INSERT INTO subcategories (id, categoryId, name) VALUES
-('hotel', 'travel', 'Отель'),
-('airplane', 'travel', 'Авиабилеты'),
-('train', 'travel', 'Поезд'),
-('vacation', 'travel', 'Отдых')
+('hotel', 10, 'Отель'),
+('airplane', 10, 'Авиабилеты'),
+('train', 10, 'Поезд'),
+('vacation', 10, 'Отдых')
 ON DUPLICATE KEY UPDATE id=id;
 
 -- Вставить системные категории для доходов
-INSERT INTO categories (id, name, icon, isSystem) VALUES
-('salary', 'Зарплата', 'work', TRUE),
-('business', 'Бизнес', 'store', TRUE),
-('investment', 'Инвестиции', 'trending-up', TRUE),
-('freelance', 'Фриланс', 'laptop', TRUE),
-('bonus', 'Бонусы', 'stars', TRUE),
-('other', 'Другое', 'more', TRUE)
-ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO categories (name, icon, isSystem) VALUES
+('Зарплата', 'work', TRUE),                      -- id = 11
+('Бизнес', 'store', TRUE),                       -- id = 12
+('Инвестиции', 'trending-up', TRUE),             -- id = 13
+('Фриланс', 'laptop', TRUE),                     -- id = 14
+('Бонусы', 'stars', TRUE),                       -- id = 15
+('Другое', 'more', TRUE)                         -- id = 16
+ON DUPLICATE KEY UPDATE name=name;
 

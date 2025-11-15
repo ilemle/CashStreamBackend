@@ -6,7 +6,7 @@ import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/re
 import { CreateOperationRequest } from '../types/database';
 
 // Вспомогательная функция для обновления бюджета
-async function updateBudgetSpent(userId: string, categoryId: string | null, amount: number, operation: 'add' | 'subtract') {
+async function updateBudgetSpent(userId: string, categoryId: number | null, amount: number, operation: 'add' | 'subtract') {
   try {
     if (!categoryId) {
       console.log(`⚠️ No categoryId provided, skipping budget update`);
@@ -265,7 +265,7 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
     const opData: CreateOperationRequest & { userId: string } = {
       title: req.body.title,
       amount: req.body.amount,
-      categoryId: req.body.categoryId !== undefined ? req.body.categoryId : null,
+      categoryId: req.body.categoryId !== undefined ? Number(req.body.categoryId) : null,
       subcategoryId: req.body.subcategoryId !== undefined ? req.body.subcategoryId : null,
       date: req.body.date || new Date(),
       timestamp: req.body.timestamp !== undefined ? req.body.timestamp : undefined,
@@ -337,12 +337,15 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
       console.log(`⚠️ Operation type changed from income to ${newType}, goals were auto-filled and cannot be automatically reverted`);
     }
     
-    // Преобразуем undefined в null для SQL
+    // Преобразуем undefined в null для SQL и конвертируем типы
     const updateData = Object.fromEntries(
-      Object.entries(req.body).map(([key, value]) => [
-        key,
-        value === undefined ? null : value
-      ])
+      Object.entries(req.body).map(([key, value]) => {
+        if (key === 'categoryId' && value !== undefined && value !== null) {
+          // Конвертируем categoryId в number
+          return [key, Number(value)];
+        }
+        return [key, value === undefined ? null : value];
+      })
     );
 
     // Обновляем операцию
@@ -443,7 +446,7 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     const operationsData: (CreateOperationRequest & { userId: string })[] = operations.map((op: any) => ({
       title: op.title,
       amount: op.amount,
-      categoryId: op.categoryId || null,
+      categoryId: op.categoryId !== undefined ? Number(op.categoryId) : null,
       subcategoryId: op.subcategoryId || null,
       date: op.date,
       timestamp: op.timestamp || undefined,

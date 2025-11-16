@@ -65,4 +65,33 @@ router.get('/protected', protect, (req: express.Request, res: express.Response) 
   });
 });
 
+/**
+ * @swagger
+ * /api/test/simple:
+ *   get:
+ *     summary: Простой тестовый роут без авторизации
+ *     description: Самый простой роут для проверки работоспособности
+ *     tags: [Test]
+ *     responses:
+ *       200:
+ *         description: Успешный ответ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Simple test works!"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+router.get('/simple', (_req: express.Request, res: express.Response) => {
+  res.json({
+    message: 'Simple test works!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 export default router;

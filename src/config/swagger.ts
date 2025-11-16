@@ -34,6 +34,10 @@ const options = {
       {
         url: 'https://api.cashstream.com',
         description: 'Production server',
+      },
+      {
+        url: process.env.API_BASE_URL || 'http://localhost:3000',
+        description: 'Current server',
       }
     ],
     components: {

@@ -1,5 +1,30 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Определяем пути к файлам роутов в зависимости от режима
+const getApiPaths = () => {
+  const cwd = process.cwd();
+  const paths = [];
+
+  // Проверяем, есть ли папка src (dev режим с ts-node)
+  if (fs.existsSync(path.join(cwd, 'src', 'routes'))) {
+    paths.push('./src/routes/*.ts');
+  }
+
+  // Проверяем, есть ли папка dist/src/routes (production режим)
+  if (fs.existsSync(path.join(cwd, 'dist', 'src', 'routes'))) {
+    paths.push('./dist/src/routes/*.js');
+  }
+
+  // Проверяем альтернативные пути
+  if (fs.existsSync(path.join(cwd, 'routes'))) {
+    paths.push('./routes/*.js');
+  }
+
+  return paths;
+};
 
 const options = {
   definition: {
@@ -27,7 +52,7 @@ const options = {
       { name: 'Admin', description: 'Администрирование' }
     ],
     servers: [
- 
+
 
       {
         url: 'http://37.1.196.196:3000',
@@ -172,16 +197,17 @@ const options = {
       bearerAuth: []
     }]
   },
-  apis: [
-    './src/routes/*.ts',
-    './routes/*.js'
-  ], 
+  apis: getApiPaths(), // Динамически определяем пути
 };
+
+const apiPaths = getApiPaths();
+console.log('🔍 Swagger API paths to scan:', apiPaths);
 
 const specs = swaggerJSDoc(options);
 
 console.log('🔍 Swagger specs generated:');
 console.log('🔍 Current working directory:', process.cwd());
+console.log('🔍 API paths used for scanning:', apiPaths);
 console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
 console.log('🔍 Available paths:', Object.keys(specs.paths || {}));
 console.log('🔍 Tags found:', specs.tags?.length || 0);

@@ -15,6 +15,13 @@ const connectDB = async (): Promise<void> => {
       charset: 'utf8mb4' // Правильная кодировка для поддержки всех Unicode символов
     });
 
+    // Устанавливаем кодировку для каждого нового соединения из пула
+    pool.on('connection', async (connection: mysql.PoolConnection) => {
+      await connection.execute('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
+      await connection.execute('SET CHARACTER SET utf8mb4');
+      await connection.execute('SET character_set_connection=utf8mb4');
+    });
+
     // Тест подключения
     const connection = await pool.getConnection();
     console.log(`✅ MySQL Connected: ${connection.config.host}`);

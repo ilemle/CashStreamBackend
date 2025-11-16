@@ -72,3 +72,4 @@ const value = data.field ?? null; // undefined -> null
 
 См. файл `MULTILINGUAL_CATEGORIES.md` для подробной документации по мультиязычной системе.
 
+

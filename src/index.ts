@@ -23,6 +23,18 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware для установки правильной кодировки UTF-8 в заголовках ответов
+// Переопределяем res.json() чтобы всегда устанавливать правильный charset
+app.use((_req: Request, res: Response, next: any) => {
+  const originalJson = res.json.bind(res);
+  res.json = function (body: any) {
+    res.charset = 'utf-8';
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return originalJson(body);
+  };
+  next();
+});
+
 // Routes
 app.get('/', (_req: Request, res: Response) => {
   res.json({ 

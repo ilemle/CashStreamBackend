@@ -214,3 +214,4 @@ console.log('🔍 Tags found:', specs.tags?.length || 0);
 console.log('🔍 Schemas found:', Object.keys(specs.components?.schemas || {}).length);
 
 export { swaggerUi, specs };
+

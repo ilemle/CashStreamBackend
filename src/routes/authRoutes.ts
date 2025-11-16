@@ -315,22 +315,276 @@ router.post('/login', login);
  */
 router.get('/me', protect, getMe);
 
+/**
+ * @swagger
+ * /api/auth/password/reset-request:
+ *   post:
+ *     summary: Запрос на сброс пароля
+ *     description: Отправляет код подтверждения на email для сброса пароля
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email адрес пользователя
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Код отправлен
+ *         $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Неверный email
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
+/**
+ * @swagger
+ * /api/auth/password/reset:
+ *   post:
+ *     summary: Сброс пароля
+ *     description: Устанавливает новый пароль используя код подтверждения
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email адрес пользователя
+ *                 example: "user@example.com"
+ *               code:
+ *                 type: string
+ *                 description: Код подтверждения из email
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 description: Новый пароль
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Пароль успешно изменен
+ *         $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Неверный код или данные
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 // Восстановление пароля
 router.post('/password/reset-request', requestPasswordReset);
 router.post('/password/reset', resetPassword);
 
+/**
+ * @swagger
+ * /api/auth/password/change:
+ *   post:
+ *     summary: Изменение пароля
+ *     description: Изменяет пароль авторизованного пользователя
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *                 description: Текущий пароль
+ *                 example: "currentpassword123"
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 description: Новый пароль
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Пароль успешно изменен
+ *         $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Неверный текущий пароль
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Не авторизован
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 // Изменение пароля (требует авторизации)
 router.post('/password/change', protect, changePassword);
 
+/**
+ * @swagger
+ * /api/auth/account:
+ *   delete:
+ *     summary: Удаление аккаунта
+ *     description: Полностью удаляет аккаунт авторизованного пользователя
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Аккаунт успешно удален
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Не авторизован
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 // Удаление аккаунта (требует авторизации)
 router.delete('/account', protect, deleteAccount);
 
-// Получение информации о текущем пользователе
-router.get('/me', protect, getMe);
-
-// Telegram авторизация
+/**
+ * @swagger
+ * /api/auth/telegram/bot-url:
+ *   get:
+ *     summary: Получить URL Telegram бота
+ *     description: Возвращает URL для авторизации через Telegram бота
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: URL бота получен
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 botUrl:
+ *                   type: string
+ *                   example: "https://t.me/cashstream_bot"
+ *       401:
+ *         description: Не авторизован
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 router.get('/telegram/bot-url', getTelegramBotUrl);
+
+/**
+ * @swagger
+ * /api/auth/telegram/login:
+ *   post:
+ *     summary: Авторизация через Telegram
+ *     description: Авторизует пользователя через Telegram данные
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - telegramData
+ *             properties:
+ *               telegramData:
+ *                 type: object
+ *                 description: Данные от Telegram авторизации
+ *     responses:
+ *       200:
+ *         description: Авторизация успешна
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 token:
+ *                   type: string
+ *                   description: JWT токен
+ *                   example: "eyJhbGciOiJIUzI1NiIs..."
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Неверные данные Telegram
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/telegram/login', loginWithTelegram);
+
+/**
+ * @swagger
+ * /api/auth/telegram/check:
+ *   post:
+ *     summary: Проверка Telegram авторизации
+ *     description: Проверяет статус авторизации через Telegram
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: ID сессии Telegram авторизации
+ *                 example: "session_12345"
+ *     responses:
+ *       200:
+ *         description: Статус авторизации получен
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 authenticated:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Неверные данные сессии
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Ошибка сервера
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/telegram/check', checkTelegramAuth);
 
 export default router;

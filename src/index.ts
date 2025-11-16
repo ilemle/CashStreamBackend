@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 import connectDB from './config/database';
+import { swaggerUi, specs } from './config/swagger';
 
 // Load environment variables
 dotenv.config();
@@ -28,10 +29,20 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.get('/', (_req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     message: 'Welcome to CashStream API',
     version: '1.0.0',
-    status: 'running'
+    status: 'running',
+    docs: 'http://localhost:3000/api-docs',
+    endpoints: {
+      auth: '/api/auth',
+      categories: '/api/categories',
+      operations: '/api/operations',
+      budgets: '/api/budgets',
+      goals: '/api/goals',
+      currencies: '/api/currencies',
+      debts: '/api/debts'
+    }
   });
 });
 
@@ -41,6 +52,9 @@ app.get('/health', (_req: Request, res: Response) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // API Routes
 import { currencyConverter } from './middleware/currency';

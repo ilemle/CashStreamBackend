@@ -178,11 +178,7 @@ const options = {
       bearerAuth: []
     }]
   },
-  apis: [
-    // Читать аннотации из роут файлов
-    './src/routes/*.ts',
-    './routes/*.js'
-  ], // Пути к файлам с аннотациями
+  apis: ["**/*.ts"], 
 };
 
 const specs = swaggerJSDoc(options);

@@ -13,6 +13,19 @@ const options = {
         email: 'support@cashstream.com'
       }
     },
+    tags: [
+      { name: 'Health', description: 'Проверка здоровья сервера' },
+      { name: 'Test', description: 'Тестовые эндпоинты' },
+      { name: 'Authentication', description: 'Аутентификация пользователей' },
+      { name: 'Categories', description: 'Управление категориями' },
+      { name: 'Operations', description: 'Финансовые операции' },
+      { name: 'Budgets', description: 'Бюджеты по категориям' },
+      { name: 'Goals', description: 'Финансовые цели' },
+      { name: 'Currencies', description: 'Курсы валют' },
+      { name: 'AI', description: 'ИИ помощник' },
+      { name: 'Debts', description: 'Управление долгами' },
+      { name: 'Admin', description: 'Администрирование' }
+    ],
     servers: [
       {
         url: 'http://localhost:3000',
@@ -161,9 +174,40 @@ const options = {
       bearerAuth: []
     }]
   },
-  apis: ['./src/routes/*.ts', './src/controllers/*.ts'], // Пути к файлам с аннотациями
+  apis: [
+    // Все роуты явно
+    './src/routes/authRoutes.ts',
+    './src/routes/operationRoutes.ts',
+    './src/routes/budgetRoutes.ts',
+    './src/routes/goalRoutes.ts',
+    './src/routes/categoryRoutes.ts',
+    './src/routes/currencyRoutes.ts',
+    './src/routes/adminRoutes.ts',
+    './src/routes/aiRoutes.ts',
+    './src/routes/debtRoutes.ts',
+    './src/routes/testRoutes.ts',
+    './src/index.ts',
+
+    // Альтернативные пути для Docker
+    __dirname + '/../routes/authRoutes.ts',
+    __dirname + '/../routes/operationRoutes.ts',
+    __dirname + '/../routes/budgetRoutes.ts',
+    __dirname + '/../routes/goalRoutes.ts',
+    __dirname + '/../routes/categoryRoutes.ts',
+    __dirname + '/../routes/currencyRoutes.ts',
+    __dirname + '/../routes/adminRoutes.ts',
+    __dirname + '/../routes/aiRoutes.ts',
+    __dirname + '/../routes/debtRoutes.ts',
+    __dirname + '/../routes/testRoutes.ts',
+    __dirname + '/../index.ts'
+  ], // Пути к файлам с аннотациями
 };
 
 const specs = swaggerJSDoc(options);
+
+console.log('🔍 Swagger specs generated:');
+console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
+console.log('🔍 Tags found:', specs.tags?.length || 0);
+console.log('🔍 Components schemas:', Object.keys(specs.components?.schemas || {}).length);
 
 export { swaggerUi, specs };

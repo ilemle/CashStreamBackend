@@ -46,15 +46,45 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Проверка здоровья сервера
+ *     description: Возвращает статус сервера и timestamp
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Сервер работает
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
 });
 
 // Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+console.log('📚 Setting up Swagger UI...');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  explorer: true,
+  swaggerOptions: {
+    docExpansion: 'none',
+    filter: true,
+    showRequestHeaders: true
+  }
+}));
 
 // API Routes
 import { currencyConverter } from './middleware/currency';
@@ -67,6 +97,7 @@ import categoryRoutes from './routes/categoryRoutes';
 import adminRoutes from './routes/adminRoutes';
 import aiRoutes from './routes/aiRoutes';
 import debtRoutes from './routes/debtRoutes';
+import testRoutes from './routes/testRoutes';
 // Currency conversion middleware для всех API роутов
 app.use('/api', currencyConverter);
 
@@ -79,6 +110,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/debts', debtRoutes);
+app.use('/api/test', testRoutes);
 
 // Serve admin panel static files in production
 if (process.env.NODE_ENV === 'production') {

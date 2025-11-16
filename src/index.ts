@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.get('/', (_req: Request, res: Response) => {
-  res.json({
+  res.json({ 
     message: 'Welcome to CashStream API',
     version: '1.0.0',
     status: 'running',
@@ -69,7 +69,7 @@ app.get('/', (_req: Request, res: Response) => {
  *                   format: date-time
  */
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({
+  res.json({ 
     status: 'healthy',
     timestamp: new Date().toISOString()
   });

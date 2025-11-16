@@ -175,39 +175,42 @@ const options = {
     }]
   },
   apis: [
-    // Все роуты явно
-    './src/routes/authRoutes.ts',
-    './src/routes/operationRoutes.ts',
-    './src/routes/budgetRoutes.ts',
-    './src/routes/goalRoutes.ts',
-    './src/routes/categoryRoutes.ts',
-    './src/routes/currencyRoutes.ts',
-    './src/routes/adminRoutes.ts',
-    './src/routes/aiRoutes.ts',
-    './src/routes/debtRoutes.ts',
-    './src/routes/testRoutes.ts',
-    './src/index.ts',
-
-    // Альтернативные пути для Docker
-    __dirname + '/../routes/authRoutes.ts',
-    __dirname + '/../routes/operationRoutes.ts',
-    __dirname + '/../routes/budgetRoutes.ts',
-    __dirname + '/../routes/goalRoutes.ts',
-    __dirname + '/../routes/categoryRoutes.ts',
-    __dirname + '/../routes/currencyRoutes.ts',
-    __dirname + '/../routes/adminRoutes.ts',
-    __dirname + '/../routes/aiRoutes.ts',
-    __dirname + '/../routes/debtRoutes.ts',
-    __dirname + '/../routes/testRoutes.ts',
-    __dirname + '/../index.ts'
+    // Создадим отдельный файл с swagger аннотациями
+    './swagger-definitions.js',
+    './src/swagger-definitions.js',
+    __dirname + '/swagger-definitions.js'
   ], // Пути к файлам с аннотациями
 };
 
 const specs = swaggerJSDoc(options);
 
 console.log('🔍 Swagger specs generated:');
+console.log('🔍 Current working directory:', process.cwd());
+console.log('🔍 __dirname:', __dirname);
 console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
+console.log('🔍 Available paths:', Object.keys(specs.paths || {}));
 console.log('🔍 Tags found:', specs.tags?.length || 0);
 console.log('🔍 Components schemas:', Object.keys(specs.components?.schemas || {}).length);
+
+// Проверим, существуют ли файлы
+const fs = require('fs');
+const path = require('path');
+
+console.log('🔍 Checking file existence:');
+const filesToCheck = [
+  './src/routes/authRoutes.ts',
+  path.join(__dirname, '../routes/authRoutes.ts'),
+  './routes/authRoutes.js'
+];
+
+filesToCheck.forEach(file => {
+  try {
+    const fullPath = path.resolve(file);
+    const exists = fs.existsSync(fullPath);
+    console.log(`🔍 ${file} -> ${fullPath} : ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+  } catch (error) {
+    console.log(`🔍 ${file} : ERROR - ${error.message}`);
+  }
+});
 
 export { swaggerUi, specs };

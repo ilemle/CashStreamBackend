@@ -176,41 +176,15 @@ const options = {
   },
   apis: [
     // Создадим отдельный файл с swagger аннотациями
-    './swagger-definitions.js',
-    './src/swagger-definitions.js',
-    __dirname + '/swagger-definitions.js'
+    './swagger-definitions.js'
   ], // Пути к файлам с аннотациями
 };
 
 const specs = swaggerJSDoc(options);
 
 console.log('🔍 Swagger specs generated:');
-console.log('🔍 Current working directory:', process.cwd());
-console.log('🔍 __dirname:', __dirname);
 console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
 console.log('🔍 Available paths:', Object.keys(specs.paths || {}));
 console.log('🔍 Tags found:', specs.tags?.length || 0);
-console.log('🔍 Components schemas:', Object.keys(specs.components?.schemas || {}).length);
-
-// Проверим, существуют ли файлы
-const fs = require('fs');
-const path = require('path');
-
-console.log('🔍 Checking file existence:');
-const filesToCheck = [
-  './src/routes/authRoutes.ts',
-  path.join(__dirname, '../routes/authRoutes.ts'),
-  './routes/authRoutes.js'
-];
-
-filesToCheck.forEach(file => {
-  try {
-    const fullPath = path.resolve(file);
-    const exists = fs.existsSync(fullPath);
-    console.log(`🔍 ${file} -> ${fullPath} : ${exists ? 'EXISTS' : 'NOT FOUND'}`);
-  } catch (error) {
-    console.log(`🔍 ${file} : ERROR - ${error.message}`);
-  }
-});
 
 export { swaggerUi, specs };

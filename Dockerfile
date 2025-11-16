@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json yarn.lock* ./ 
 
 # Устанавливаем ВСЕ зависимости (включая dev) для сборки
-RUN yarn install
+RUN yarn install --frozen-lockfile
 
 # Копируем остальной код приложения
 COPY . .
@@ -30,7 +30,7 @@ WORKDIR /app
 COPY package.json yarn.lock* ./
 
 # Устанавливаем только production зависимости
-RUN yarn install --production
+RUN yarn install --production --frozen-lockfile
 
 # Копируем собранные файлы из stage сборки
 COPY --from=builder /app/dist ./dist

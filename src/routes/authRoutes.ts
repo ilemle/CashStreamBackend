@@ -137,6 +137,82 @@ router.post('/register/verify', verifyEmailAndRegister);
 
 /**
  * @swagger
+ * /auth/register/phone/send-code:
+ *   post:
+ *     summary: Отправить код верификации на телефон
+ *     description: Отправляет код подтверждения на указанный номер телефона для регистрации
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: Номер телефона в международном формате
+ *                 example: "+79001234567"
+ *     responses:
+ *       200:
+ *         description: Код отправлен
+ *       400:
+ *         description: Ошибка валидации
+ *       500:
+ *         description: Ошибка сервера
+ */
+router.post('/register/phone/send-code', sendPhoneVerificationCode);
+
+/**
+ * @swagger
+ * /auth/register/phone/verify:
+ *   post:
+ *     summary: Подтвердить телефон и зарегистрироваться
+ *     description: Проверяет код подтверждения и создает учетную запись пользователя
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *               - code
+ *               - password
+ *               - firstName
+ *               - lastName
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 example: "+79001234567"
+ *               code:
+ *                 type: string
+ *                 example: "123456"
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "securepassword"
+ *               firstName:
+ *                 type: string
+ *                 example: "Иван"
+ *               lastName:
+ *                 type: string
+ *                 example: "Иванов"
+ *     responses:
+ *       201:
+ *         description: Пользователь зарегистрирован
+ *       400:
+ *         description: Ошибка валидации
+ *       500:
+ *         description: Ошибка сервера
+ */
+router.post('/register/phone/verify', verifyPhoneAndRegister);
+
+/**
+ * @swagger
  * /auth/login:
  *   post:
  *     summary: Войти в систему

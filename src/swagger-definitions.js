@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /auth/register/send-code:
+ * /api/auth/register/send-code:
  *   post:
  *     summary: Отправить код верификации на email
  *     description: Отправляет код верификации на указанный email адрес для регистрации
@@ -46,7 +46,7 @@
 
 /**
  * @swagger
- * /auth/register/verify:
+ * /api/auth/register/verify:
  *   post:
  *     summary: Подтвердить email и зарегистрироваться
  *     description: Подтверждает email кодом и создает новый аккаунт
@@ -109,7 +109,7 @@
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Войти в систему
  *     description: Аутентифицирует пользователя и возвращает JWT токен
@@ -172,7 +172,7 @@
 
 /**
  * @swagger
- * /auth/me:
+ * /api/auth/me:
  *   get:
  *     summary: Получить информацию о текущем пользователе
  *     description: Возвращает информацию о авторизованном пользователе
@@ -202,7 +202,7 @@
 
 /**
  * @swagger
- * /operations:
+ * /api/operations:
  *   get:
  *     summary: Получить операции с пагинацией
  *     description: Возвращает список финансовых операций пользователя с пагинацией
@@ -300,7 +300,7 @@
 
 /**
  * @swagger
- * /operations:
+ * /api/operations:
  *   post:
  *     summary: Создать операцию
  *     description: Создает новую финансовую операцию
@@ -384,7 +384,7 @@
 
 /**
  * @swagger
- * /operations/balance:
+ * /api/operations/balance:
  *   get:
  *     summary: Получить баланс
  *     description: Возвращает текущий баланс пользователя по всем счетам
@@ -427,7 +427,7 @@
 
 /**
  * @swagger
- * /budgets:
+ * /api/budgets:
  *   get:
  *     summary: Получить все бюджеты пользователя
  *     description: Возвращает список всех бюджетов текущего авторизованного пользователя
@@ -462,7 +462,7 @@
 
 /**
  * @swagger
- * /budgets:
+ * /api/budgets:
  *   post:
  *     summary: Создать бюджет
  *     description: Создает новый бюджет для указанной категории
@@ -523,7 +523,7 @@
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   get:
  *     summary: Получить все категории с подкатегориями
  *     description: Возвращает список всех категорий и их подкатегорий
@@ -562,7 +562,7 @@
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   post:
  *     summary: Создать пользовательскую категорию
  *     description: Создает новую пользовательскую категорию
@@ -623,7 +623,7 @@
 
 /**
  * @swagger
- * /test:
+ * /api/test:
  *   get:
  *     summary: Тестовый эндпоинт
  *     description: Простой тестовый эндпоинт для проверки работы API
@@ -646,7 +646,7 @@
 
 /**
  * @swagger
- * /test/protected:
+ * /api/test/protected:
  *   get:
  *     summary: Защищенный тестовый эндпоинт
  *     description: Тестовый эндпоинт с JWT авторизацией

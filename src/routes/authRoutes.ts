@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import {
-  sendVerificationCode,
+import { 
+  sendVerificationCode, 
   verifyEmailAndRegister,
   sendPhoneVerificationCode,
   verifyPhoneAndRegister,
-  login,
+  login, 
   getMe,
   requestPasswordReset,
   resetPassword,
@@ -32,13 +32,25 @@ const router = Router();
  *           schema:
  *             type: object
  *             required:
+ *               - username
  *               - email
+ *               - password
  *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Имя пользователя
+ *                 example: "Иван Петров"
  *               email:
  *                 type: string
  *                 format: email
  *                 description: Email адрес для регистрации
  *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 description: Пароль пользователя
+ *                 example: "securepassword123"
  *     responses:
  *       200:
  *         description: Код отправлен
@@ -52,7 +64,14 @@ const router = Router();
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Verification code sent"
+ *                   example: "Verification code sent to your email"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                       example: "user@example.com"
  *       400:
  *         description: Ошибка валидации
  *         $ref: '#/components/schemas/Error'
@@ -78,9 +97,8 @@ router.post('/register/send-code', sendVerificationCode);
  *             required:
  *               - email
  *               - code
+ *               - username
  *               - password
- *               - firstName
- *               - lastName
  *             properties:
  *               email:
  *                 type: string
@@ -90,19 +108,16 @@ router.post('/register/send-code', sendVerificationCode);
  *                 type: string
  *                 description: Код подтверждения из email
  *                 example: "123456"
- *               password:
- *                 type: string
- *                 minLength: 6
- *                 description: Пароль пользователя
- *                 example: "securepassword"
- *               firstName:
+ *               username:
  *                 type: string
  *                 description: Имя пользователя
- *                 example: "Иван"
- *               lastName:
+ *                 example: "Иван Петров"
+ *               password:
  *                 type: string
- *                 description: Фамилия пользователя
- *                 example: "Иванов"
+ *                 format: password
+ *                 minLength: 6
+ *                 description: Пароль пользователя
+ *                 example: "securepassword123"
  *     responses:
  *       201:
  *         description: Пользователь зарегистрирован
@@ -181,26 +196,27 @@ router.post('/register/phone/send-code', sendPhoneVerificationCode);
  *             required:
  *               - phone
  *               - code
+ *               - username
  *               - password
- *               - firstName
- *               - lastName
  *             properties:
  *               phone:
  *                 type: string
+ *                 description: Номер телефона в международном формате
  *                 example: "+79001234567"
  *               code:
  *                 type: string
+ *                 description: Код подтверждения из SMS
  *                 example: "123456"
+ *               username:
+ *                 type: string
+ *                 description: Имя пользователя
+ *                 example: "Иван Петров"
  *               password:
  *                 type: string
+ *                 format: password
  *                 minLength: 6
- *                 example: "securepassword"
- *               firstName:
- *                 type: string
- *                 example: "Иван"
- *               lastName:
- *                 type: string
- *                 example: "Иванов"
+ *                 description: Пароль пользователя
+ *                 example: "securepassword123"
  *     responses:
  *       201:
  *         description: Пользователь зарегистрирован

@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.get('/', (_req: Request, res: Response) => {
-  res.json({
+  res.json({ 
     message: 'Welcome to CashStream API',
     version: '1.0.0',
     status: 'running',
@@ -73,7 +73,7 @@ app.get('/', (_req: Request, res: Response) => {
  *                   format: date-time
  */
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({
+  res.json({ 
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
@@ -198,7 +198,7 @@ app.get('/test-ui', (_req, res) => {
 </body>
 </html>
   `);
-});
+  });
 
 // 404 handler
 app.use('*', (_req: Request, res: Response) => {
@@ -211,8 +211,8 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
   res.status(500).json({
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : {}
+    });
   });
-});
 
 // Start server
 app.listen(PORT, () => {

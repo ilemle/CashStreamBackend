@@ -8,7 +8,7 @@ router.use(protect);
 
 /**
  * @swagger
- * /operations:
+ * /api/operations:
  *   get:
  *     summary: Получить операции с пагинацией
  *     description: Возвращает список операций пользователя с поддержкой пагинации, фильтрации по дате и другим параметрам
@@ -95,7 +95,7 @@ router.route('/').get(getOperations);
 
 /**
  * @swagger
- * /operations:
+ * /api/operations:
  *   post:
  *     summary: Создать операцию
  *     description: Создает новую финансовую операцию (доход, расход или перевод)
@@ -182,7 +182,7 @@ router.route('/').post(createOperation);
 
 /**
  * @swagger
- * /operations/batch:
+ * /api/operations/batch:
  *   post:
  *     summary: Создать несколько операций
  *     description: Создает несколько финансовых операций одновременно
@@ -232,7 +232,7 @@ router.route('/batch').post(createOperationsBatch);
 
 /**
  * @swagger
- * /operations/balance:
+ * /api/operations/balance:
  *   get:
  *     summary: Получить баланс
  *     description: Возвращает текущий баланс пользователя с учетом всех операций
@@ -284,7 +284,7 @@ router.route('/balance').get(getBalance);
 
 /**
  * @swagger
- * /operations/{id}:
+ * /api/operations/{id}:
  *   get:
  *     summary: Получить операцию по ID
  *     description: Возвращает детальную информацию об операции
@@ -330,7 +330,7 @@ router.route('/:id').get(getOperation);
 
 /**
  * @swagger
- * /operations/{id}:
+ * /api/operations/{id}:
  *   put:
  *     summary: Обновить операцию
  *     description: Обновляет существующую операцию
@@ -382,7 +382,7 @@ router.route('/:id').put(updateOperation);
 
 /**
  * @swagger
- * /operations/{id}:
+ * /api/operations/{id}:
  *   delete:
  *     summary: Удалить операцию
  *     description: Удаляет операцию пользователя

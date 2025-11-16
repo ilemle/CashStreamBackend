@@ -8,7 +8,7 @@ router.use(protect);
 
 /**
  * @swagger
- * /goals:
+ * /api/goals:
  *   get:
  *     summary: Получить все цели пользователя
  *     description: Возвращает список всех финансовых целей текущего авторизованного пользователя
@@ -44,7 +44,7 @@ router.route('/').get(getGoals);
 
 /**
  * @swagger
- * /goals:
+ * /api/goals:
  *   post:
  *     summary: Создать цель
  *     description: Создает новую финансовую цель
@@ -114,7 +114,7 @@ router.route('/').post(createGoal);
 
 /**
  * @swagger
- * /goals/{id}:
+ * /api/goals/{id}:
  *   put:
  *     summary: Обновить цель
  *     description: Обновляет существующую финансовую цель
@@ -166,7 +166,7 @@ router.route('/:id').put(updateGoal);
 
 /**
  * @swagger
- * /goals/{id}:
+ * /api/goals/{id}:
  *   delete:
  *     summary: Удалить цель
  *     description: Удаляет финансовую цель пользователя

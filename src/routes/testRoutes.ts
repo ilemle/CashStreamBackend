@@ -5,7 +5,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /test:
+ * /api/test:
  *   get:
  *     summary: Тестовый эндпоинт
  *     description: Простой тестовый эндпоинт для проверки Swagger
@@ -34,7 +34,7 @@ router.get('/', (_req: express.Request, res: express.Response) => {
 
 /**
  * @swagger
- * /test/protected:
+ * /api/test/protected:
  *   get:
  *     summary: Защищенный тестовый эндпоинт
  *     description: Тестовый эндпоинт с JWT авторизацией

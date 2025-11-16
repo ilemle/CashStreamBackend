@@ -6,7 +6,7 @@ const router = Router();
 
 /**
  * @swagger
- * /ai/chat:
+ * /api/ai/chat:
  *   post:
  *     summary: Чат с ИИ помощником
  *     description: Отправляет сообщение ИИ помощнику и получает ответ
@@ -75,7 +75,7 @@ router.post('/chat', protect, chatWithAI);
 
 /**
  * @swagger
- * /ai/chat/stream:
+ * /api/ai/chat/stream:
  *   post:
  *     summary: Стриминг чат с ИИ помощником
  *     description: Отправляет сообщение ИИ помощнику и получает ответ в режиме стриминга (постепенная печать)

@@ -8,7 +8,7 @@ router.use(protect);
 
 /**
  * @swagger
- * /budgets:
+ * /api/budgets:
  *   get:
  *     summary: Получить все бюджеты пользователя
  *     description: Возвращает список всех бюджетов текущего авторизованного пользователя
@@ -44,7 +44,7 @@ router.route('/').get(getBudgets);
 
 /**
  * @swagger
- * /budgets:
+ * /api/budgets:
  *   post:
  *     summary: Создать бюджет
  *     description: Создает новый бюджет для указанной категории
@@ -106,7 +106,7 @@ router.route('/').post(createBudget);
 
 /**
  * @swagger
- * /budgets/{id}:
+ * /api/budgets/{id}:
  *   put:
  *     summary: Обновить бюджет
  *     description: Обновляет существующий бюджет
@@ -158,7 +158,7 @@ router.route('/:id').put(updateBudget);
 
 /**
  * @swagger
- * /budgets/{id}:
+ * /api/budgets/{id}:
  *   delete:
  *     summary: Удалить бюджет
  *     description: Удаляет бюджет пользователя

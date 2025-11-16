@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && cd admin && yarn build",
-    "build:backend": "tsc && cp src/swagger-definitions.js dist/",
+    "build:backend": "tsc",
     "build:admin": "cd admin && yarn build",
     "start": "node dist/index.js",
     "predev": "node scripts/clean-dev.js",

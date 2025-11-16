@@ -20,7 +20,7 @@ const router = Router();
 
 /**
  * @swagger
- * /auth/register/send-code:
+ * /api/auth/register/send-code:
  *   post:
  *     summary: Отправить код верификации на email
  *     description: Отправляет код подтверждения на указанный email адрес для регистрации
@@ -64,7 +64,7 @@ router.post('/register/send-code', sendVerificationCode);
 
 /**
  * @swagger
- * /auth/register/verify:
+ * /api/auth/register/verify:
  *   post:
  *     summary: Подтвердить email и зарегистрироваться
  *     description: Проверяет код подтверждения и создает учетную запись пользователя
@@ -137,7 +137,7 @@ router.post('/register/verify', verifyEmailAndRegister);
 
 /**
  * @swagger
- * /auth/register/phone/send-code:
+ * /api/auth/register/phone/send-code:
  *   post:
  *     summary: Отправить код верификации на телефон
  *     description: Отправляет код подтверждения на указанный номер телефона для регистрации
@@ -167,7 +167,7 @@ router.post('/register/phone/send-code', sendPhoneVerificationCode);
 
 /**
  * @swagger
- * /auth/register/phone/verify:
+ * /api/auth/register/phone/verify:
  *   post:
  *     summary: Подтвердить телефон и зарегистрироваться
  *     description: Проверяет код подтверждения и создает учетную запись пользователя
@@ -213,7 +213,7 @@ router.post('/register/phone/verify', verifyPhoneAndRegister);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Войти в систему
  *     description: Авторизация пользователя по email или номеру телефона
@@ -270,7 +270,7 @@ router.post('/login', login);
 
 /**
  * @swagger
- * /auth/me:
+ * /api/auth/me:
  *   get:
  *     summary: Получить информацию о текущем пользователе
  *     description: Возвращает данные текущего авторизованного пользователя

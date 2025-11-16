@@ -6,7 +6,7 @@ const router = Router();
 
 /**
  * @swagger
- * /currencies:
+ * /api/currencies:
  *   get:
  *     summary: Получить список валют
  *     description: Возвращает список поддерживаемых валют
@@ -44,7 +44,7 @@ router.get('/', getCurrenciesList);
 
 /**
  * @swagger
- * /currencies/rates:
+ * /api/currencies/rates:
  *   get:
  *     summary: Получить курсы валют
  *     description: Возвращает текущие курсы обмена валют

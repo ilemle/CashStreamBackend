@@ -17,7 +17,7 @@ router.use(protect);
 
 /**
  * @swagger
- * /debts:
+ * /api/debts:
  *   get:
  *     summary: Получить все долги пользователя
  *     description: Возвращает список всех долгов текущего авторизованного пользователя
@@ -53,7 +53,7 @@ router.get('/', getDebts);
 
 /**
  * @swagger
- * /debts/overdue:
+ * /api/debts/overdue:
  *   get:
  *     summary: Получить просроченные долги
  *     description: Возвращает список всех просроченных долгов текущего пользователя
@@ -89,7 +89,7 @@ router.get('/overdue', getOverdueDebts);
 
 /**
  * @swagger
- * /debts/{id}:
+ * /api/debts/{id}:
  *   get:
  *     summary: Получить долг по ID
  *     description: Возвращает конкретный долг пользователя по его ID
@@ -135,7 +135,7 @@ router.get('/:id', getDebt);
 
 /**
  * @swagger
- * /debts:
+ * /api/debts:
  *   post:
  *     summary: Создать долг
  *     description: Создает новый долг для пользователя
@@ -208,7 +208,7 @@ router.post('/', createDebt);
 
 /**
  * @swagger
- * /debts/{id}:
+ * /api/debts/{id}:
  *   put:
  *     summary: Обновить долг
  *     description: Обновляет существующий долг пользователя
@@ -260,7 +260,7 @@ router.put('/:id', updateDebt);
 
 /**
  * @swagger
- * /debts/{id}:
+ * /api/debts/{id}:
  *   delete:
  *     summary: Удалить долг
  *     description: Удаляет долг пользователя
@@ -307,7 +307,7 @@ router.delete('/:id', deleteDebt);
 
 /**
  * @swagger
- * /debts/{id}/paid:
+ * /api/debts/{id}/paid:
  *   patch:
  *     summary: Отметить долг как оплаченный
  *     description: Помечает долг как полностью оплаченный

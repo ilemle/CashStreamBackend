@@ -12,7 +12,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   get:
  *     summary: Получить все категории с подкатегориями
  *     description: Возвращает все системные и пользовательские категории с их подкатегориями
@@ -45,7 +45,7 @@ router.get('/', protect, getCategories);
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   post:
  *     summary: Создать пользовательскую категорию
  *     description: Создает новую пользовательскую категорию
@@ -96,7 +96,7 @@ router.post('/', protect, createUserCategory);
 
 /**
  * @swagger
- * /categories/{categoryId}/subcategories:
+ * /api/categories/{categoryId}/subcategories:
  *   post:
  *     summary: Создать подкатегорию
  *     description: Создает новую подкатегорию для указанной категории
@@ -158,7 +158,7 @@ router.post('/:categoryId/subcategories', protect, addSubcategory);
 
 /**
  * @swagger
- * /categories/{categoryId}:
+ * /api/categories/{categoryId}:
  *   delete:
  *     summary: Удалить пользовательскую категорию
  *     description: Удаляет пользовательскую категорию (системные категории удалить нельзя)
@@ -204,7 +204,7 @@ router.delete('/:categoryId', protect, deleteUserCategory);
 
 /**
  * @swagger
- * /categories/subcategories/{subcategoryId}:
+ * /api/categories/subcategories/{subcategoryId}:
  *   delete:
  *     summary: Удалить подкатегорию
  *     description: Удаляет подкатегорию

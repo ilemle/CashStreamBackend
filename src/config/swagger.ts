@@ -178,14 +178,31 @@ const options = {
       bearerAuth: []
     }]
   },
-  apis: ["**/*.ts"], 
+  apis: [
+    './swagger-annotations.js'
+  ], 
 };
 
 const specs = swaggerJSDoc(options);
 
 console.log('🔍 Swagger specs generated:');
+console.log('🔍 Current working directory:', process.cwd());
 console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
 console.log('🔍 Available paths:', Object.keys(specs.paths || {}));
 console.log('🔍 Tags found:', specs.tags?.length || 0);
+console.log('🔍 Schemas found:', Object.keys(specs.components?.schemas || {}).length);
+
+// Проверяем, что файл аннотаций найден
+const fs = require('fs');
+const path = require('path');
+
+const annotationsPath = './swagger-annotations.js';
+console.log('🔍 Checking annotations file:', path.resolve(annotationsPath));
+console.log('🔍 Annotations file exists:', fs.existsSync(annotationsPath));
+
+if (fs.existsSync(annotationsPath)) {
+  const stats = fs.statSync(annotationsPath);
+  console.log('🔍 Annotations file size:', stats.size, 'bytes');
+}
 
 export { swaggerUi, specs };

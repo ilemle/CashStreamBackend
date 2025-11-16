@@ -15,7 +15,11 @@ echo "⏳ Waiting for services to start..."
 sleep 5
 
 echo "📊 Checking Swagger logs..."
-docker-compose logs backend | grep -E "🔍|📚|📊" | tail -10
+docker-compose logs backend | grep -E "🔍|📚|📊|🚀" | tail -15
+
+echo ""
+echo "🔍 Debug info check:"
+curl -s http://localhost:3000/debug/swagger | head -20
 
 echo ""
 echo "✅ Swagger updated!"

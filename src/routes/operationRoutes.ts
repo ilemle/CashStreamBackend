@@ -131,13 +131,13 @@ router.route('/').get(getOperations);
  *                 description: Название категории
  *                 example: "Еда и напитки"
  *               categoryId:
- *                 type: integer
+ *                 type: string
  *                 description: ID категории
- *                 example: 1
+ *                 example: "550e8400-e29b-41d4-a716-446655440001"
  *               subcategoryId:
  *                 type: string
  *                 description: ID подкатегории
- *                 example: "uuid-string"
+ *                 example: "660e8400-e29b-41d4-a716-446655440001"
  *               currency:
  *                 type: string
  *                 description: Валюта операции
@@ -146,7 +146,7 @@ router.route('/').get(getOperations);
  *                 type: string
  *                 format: date-time
  *                 description: Дата операции
- *                 example: "2024-01-15T10:30:00.000Z"
+ *                 example: "2025-11-16 22:42:13"
  *               fromAccount:
  *                 type: string
  *                 description: Счет отправителя (для переводов)

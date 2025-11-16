@@ -207,6 +207,7 @@ export const getOperations = async (req: Request, res: Response, _next: NextFunc
     
     const totalTime = Date.now() - requestStartTime;
     console.log('📊 Метаданные пагинации:', {
+      opsWithConversion,
       total,
       page: pageNum,
       limit: limitNum,

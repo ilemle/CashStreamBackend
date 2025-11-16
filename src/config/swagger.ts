@@ -27,16 +27,10 @@ const options = {
       { name: 'Admin', description: 'Администрирование' }
     ],
     servers: [
+ 
+
       {
-        url: 'http://localhost:3000',
-        description: 'Development server',
-      },
-      {
-        url: 'https://api.cashstream.com',
-        description: 'Production server',
-      },
-      {
-        url: process.env.API_BASE_URL || 'http://localhost:3000',
+        url: 'http://37.1.196.196:3000',
         description: 'Current server',
       }
     ],
@@ -179,7 +173,8 @@ const options = {
     }]
   },
   apis: [
-    './swagger-annotations.js'
+    './src/routes/*.ts',
+    './routes/*.js'
   ], 
 };
 
@@ -191,18 +186,5 @@ console.log('🔍 Paths found:', Object.keys(specs.paths || {}).length);
 console.log('🔍 Available paths:', Object.keys(specs.paths || {}));
 console.log('🔍 Tags found:', specs.tags?.length || 0);
 console.log('🔍 Schemas found:', Object.keys(specs.components?.schemas || {}).length);
-
-// Проверяем, что файл аннотаций найден
-const fs = require('fs');
-const path = require('path');
-
-const annotationsPath = './swagger-annotations.js';
-console.log('🔍 Checking annotations file:', path.resolve(annotationsPath));
-console.log('🔍 Annotations file exists:', fs.existsSync(annotationsPath));
-
-if (fs.existsSync(annotationsPath)) {
-  const stats = fs.statSync(annotationsPath);
-  console.log('🔍 Annotations file size:', stats.size, 'bytes');
-}
 
 export { swaggerUi, specs };

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Operation, { IOperation } from '../models/Operation';
 import Budget from '../models/Budget';
 import Goal from '../models/Goal';
+import Category from '../models/Category';
 import { addCurrencyConversion, addCurrencyConversionToArray } from '../utils/responseFormatter';
 
 // Вспомогательная функция для обновления бюджета
@@ -281,6 +282,42 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
       subcategoryId = req.body.subcategoryId && req.body.subcategoryId.trim() !== '' 
         ? req.body.subcategoryId.trim() 
         : null;
+      
+      // Валидация: проверяем существование категории, если она указана
+      if (categoryId) {
+        const categoryExists = await Category.categoryExists(categoryId);
+        if (!categoryExists) {
+          res.status(400).json({ 
+            success: false, 
+            message: `Category with id "${categoryId}" not found. Please provide a valid category ID or leave it empty.` 
+          });
+          return;
+        }
+      }
+      
+      // Валидация: проверяем существование подкатегории, если она указана
+      if (subcategoryId) {
+        const subcategoryExists = await Category.subcategoryExists(subcategoryId);
+        if (!subcategoryExists) {
+          res.status(400).json({ 
+            success: false, 
+            message: `Subcategory with id "${subcategoryId}" not found. Please provide a valid subcategory ID or leave it empty.` 
+          });
+          return;
+        }
+        
+        // Дополнительная проверка: подкатегория должна принадлежать указанной категории
+        if (categoryId) {
+          const categoryWithSubs = await Category.getCategoryWithSubcategories(categoryId);
+          if (!categoryWithSubs || !categoryWithSubs.subcategories?.some(sub => sub.id === subcategoryId)) {
+            res.status(400).json({ 
+              success: false, 
+              message: `Subcategory "${subcategoryId}" does not belong to category "${categoryId}".` 
+            });
+            return;
+          }
+        }
+      }
     }
     
     const opData: IOperation = {
@@ -361,6 +398,42 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
         newSubcategoryId = req.body.subcategoryId && String(req.body.subcategoryId).trim() !== '' 
           ? String(req.body.subcategoryId).trim() 
           : null;
+      }
+    }
+    
+    // Валидация: проверяем существование категории, если она указана
+    if (newCategoryId && (req.body.categoryId !== undefined || req.body.type !== undefined)) {
+      const categoryExists = await Category.categoryExists(newCategoryId);
+      if (!categoryExists) {
+        res.status(400).json({ 
+          success: false, 
+          message: `Category with id "${newCategoryId}" not found. Please provide a valid category ID or leave it empty.` 
+        });
+        return;
+      }
+    }
+    
+    // Валидация: проверяем существование подкатегории, если она указана
+    if (newSubcategoryId && (req.body.subcategoryId !== undefined || req.body.type !== undefined)) {
+      const subcategoryExists = await Category.subcategoryExists(newSubcategoryId);
+      if (!subcategoryExists) {
+        res.status(400).json({ 
+          success: false, 
+          message: `Subcategory with id "${newSubcategoryId}" not found. Please provide a valid subcategory ID or leave it empty.` 
+        });
+        return;
+      }
+      
+      // Дополнительная проверка: подкатегория должна принадлежать указанной категории
+      if (newCategoryId) {
+        const categoryWithSubs = await Category.getCategoryWithSubcategories(newCategoryId);
+        if (!categoryWithSubs || !categoryWithSubs.subcategories?.some(sub => sub.id === newSubcategoryId)) {
+          res.status(400).json({ 
+            success: false, 
+            message: `Subcategory "${newSubcategoryId}" does not belong to category "${newCategoryId}".` 
+          });
+          return;
+        }
       }
     }
     
@@ -481,7 +554,10 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
     console.log(`📦 Creating batch of ${operations.length} operations for userId: ${req.user?.id}`);
 
     // Подготавливаем данные для создания с нормализацией categoryId и subcategoryId
-    const operationsData: IOperation[] = operations.map((op: any) => {
+    // И валидацией существования категорий
+    const operationsData: IOperation[] = [];
+    
+    for (const op of operations) {
       // Нормализуем categoryId и subcategoryId
       let categoryId: string | null = null;
       let subcategoryId: string | null = null;
@@ -498,9 +574,45 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
         subcategoryId = op.subcategoryId && String(op.subcategoryId).trim() !== '' 
           ? String(op.subcategoryId).trim() 
           : null;
+        
+        // Валидация: проверяем существование категории, если она указана
+        if (categoryId) {
+          const categoryExists = await Category.categoryExists(categoryId);
+          if (!categoryExists) {
+            res.status(400).json({ 
+              success: false, 
+              message: `Category with id "${categoryId}" not found in operation "${op.title}". Please provide a valid category ID or leave it empty.` 
+            });
+            return;
+          }
+        }
+        
+        // Валидация: проверяем существование подкатегории, если она указана
+        if (subcategoryId) {
+          const subcategoryExists = await Category.subcategoryExists(subcategoryId);
+          if (!subcategoryExists) {
+            res.status(400).json({ 
+              success: false, 
+              message: `Subcategory with id "${subcategoryId}" not found in operation "${op.title}". Please provide a valid subcategory ID or leave it empty.` 
+            });
+            return;
+          }
+          
+          // Дополнительная проверка: подкатегория должна принадлежать указанной категории
+          if (categoryId) {
+            const categoryWithSubs = await Category.getCategoryWithSubcategories(categoryId);
+            if (!categoryWithSubs || !categoryWithSubs.subcategories?.some(sub => sub.id === subcategoryId)) {
+              res.status(400).json({ 
+                success: false, 
+                message: `Subcategory "${subcategoryId}" does not belong to category "${categoryId}" in operation "${op.title}".` 
+              });
+              return;
+            }
+          }
+        }
       }
       
-      return {
+      operationsData.push({
         title: op.title,
         amount: op.amount,
         categoryId: categoryId,
@@ -512,8 +624,8 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
         toAccount: op.toAccount || undefined,
         currency: op.currency || 'RUB',
         userId: req.user?.id || ''
-      };
-    });
+      });
+    }
 
     // Создаем операции в транзакции
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';

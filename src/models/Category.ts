@@ -265,6 +265,24 @@ class CategoryModel {
     // Удалить подкатегорию
     await pool.execute('DELETE FROM subcategories WHERE id = ?', [id]);
   }
+
+  // Проверить существование категории по ID
+  static async categoryExists(categoryId: string): Promise<boolean> {
+    const [rows] = await pool.execute(
+      'SELECT id FROM categories WHERE id = ?',
+      [categoryId]
+    );
+    return (rows as any[]).length > 0;
+  }
+
+  // Проверить существование подкатегории по ID
+  static async subcategoryExists(subcategoryId: string): Promise<boolean> {
+    const [rows] = await pool.execute(
+      'SELECT id FROM subcategories WHERE id = ?',
+      [subcategoryId]
+    );
+    return (rows as any[]).length > 0;
+  }
 }
 
 export default CategoryModel;

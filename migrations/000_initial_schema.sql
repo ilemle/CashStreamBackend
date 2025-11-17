@@ -428,5 +428,237 @@ INSERT INTO translations (id, entityType, entityId, language, name) VALUES
 (UUID(), 'subcategory', '660e8400-e29b-41d4-a716-446655440012', 'en', 'Car Insurance')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
--- Примечание: Для остальных подкатегорий используйте аналогичный подход
--- Можно добавить их позже или создать скрипт для генерации
+-- ============================================================================
+-- LEGACY SUBCATEGORIES (для обратной совместимости со старыми ID)
+-- ============================================================================
+-- Добавляем подкатегории со старыми строковыми ID для обратной совместимости
+
+-- Подкатегории для "Еда и напитки" со старыми ID (ссылаются на UUID категорию через categoryId)
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('groceries', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.groceries'),
+('restaurant', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.restaurant'),
+('cafe', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.cafe'),
+('alcohol', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.alcohol'),
+('snacks', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.snacks'),
+('delivery', '550e8400-e29b-41d4-a716-446655440001', 'subcategory.delivery')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Транспорт" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('gas', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.gas'),
+('parking', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.parking'),
+('public_transport', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.public_transport'),
+('taxi', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.taxi'),
+('car_repair', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.car_repair'),
+('car_insurance', '550e8400-e29b-41d4-a716-446655440002', 'subcategory.car_insurance')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Покупки" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('clothes', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.clothes'),
+('electronics', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.electronics'),
+('furniture', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.furniture'),
+('home_goods', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.home_goods'),
+('books_shopping', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.books_shopping'),
+('gifts', '550e8400-e29b-41d4-a716-446655440003', 'subcategory.gifts')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Коммунальные услуги" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('electricity', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.electricity'),
+('water', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.water'),
+('gas_utilities', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.gas_utilities'),
+('internet', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.internet'),
+('phone', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.phone'),
+('heating', '550e8400-e29b-41d4-a716-446655440004', 'subcategory.heating')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Здоровье" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('pharmacy', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.pharmacy'),
+('doctor', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.doctor'),
+('dentist', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.dentist'),
+('hospital', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.hospital'),
+('insurance_health', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.insurance_health'),
+('fitness', '550e8400-e29b-41d4-a716-446655440005', 'subcategory.fitness')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Развлечения" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('movies', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.movies'),
+('music', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.music'),
+('games', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.games'),
+('hobbies', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.hobbies'),
+('concerts', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.concerts'),
+('sports', '550e8400-e29b-41d4-a716-446655440006', 'subcategory.sports')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Образование" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('courses', '550e8400-e29b-41d4-a716-446655440007', 'subcategory.courses'),
+('books_education', '550e8400-e29b-41d4-a716-446655440007', 'subcategory.books_education'),
+('tuition', '550e8400-e29b-41d4-a716-446655440007', 'subcategory.tuition'),
+('certification', '550e8400-e29b-41d4-a716-446655440007', 'subcategory.certification'),
+('workshops', '550e8400-e29b-41d4-a716-446655440007', 'subcategory.workshops')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Счета" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('credit_card', '550e8400-e29b-41d4-a716-446655440008', 'subcategory.credit_card'),
+('loan', '550e8400-e29b-41d4-a716-446655440008', 'subcategory.loan'),
+('rent', '550e8400-e29b-41d4-a716-446655440008', 'subcategory.rent'),
+('subscriptions', '550e8400-e29b-41d4-a716-446655440008', 'subcategory.subscriptions'),
+('services', '550e8400-e29b-41d4-a716-446655440008', 'subcategory.services')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Личное" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('haircut', '550e8400-e29b-41d4-a716-446655440009', 'subcategory.haircut'),
+('beauty', '550e8400-e29b-41d4-a716-446655440009', 'subcategory.beauty'),
+('laundry', '550e8400-e29b-41d4-a716-446655440009', 'subcategory.laundry'),
+('cleaning', '550e8400-e29b-41d4-a716-446655440009', 'subcategory.cleaning')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Подкатегории для "Путешествия" со старыми ID
+INSERT INTO subcategories (id, categoryId, nameKey) VALUES
+('hotel', '550e8400-e29b-41d4-a716-446655440010', 'subcategory.hotel'),
+('airplane', '550e8400-e29b-41d4-a716-446655440010', 'subcategory.airplane'),
+('train', '550e8400-e29b-41d4-a716-446655440010', 'subcategory.train'),
+('vacation', '550e8400-e29b-41d4-a716-446655440010', 'subcategory.vacation')
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+
+-- Переводы для legacy подкатегорий на русский
+INSERT INTO translations (id, entityType, entityId, language, name) VALUES
+-- Еда и напитки
+(UUID(), 'subcategory', 'groceries', 'ru', 'Продукты'),
+(UUID(), 'subcategory', 'restaurant', 'ru', 'Рестораны'),
+(UUID(), 'subcategory', 'cafe', 'ru', 'Кафе'),
+(UUID(), 'subcategory', 'alcohol', 'ru', 'Алкоголь'),
+(UUID(), 'subcategory', 'snacks', 'ru', 'Закуски'),
+(UUID(), 'subcategory', 'delivery', 'ru', 'Доставка еды'),
+-- Транспорт
+(UUID(), 'subcategory', 'gas', 'ru', 'Бензин'),
+(UUID(), 'subcategory', 'parking', 'ru', 'Парковка'),
+(UUID(), 'subcategory', 'public_transport', 'ru', 'Общественный транспорт'),
+(UUID(), 'subcategory', 'taxi', 'ru', 'Такси'),
+(UUID(), 'subcategory', 'car_repair', 'ru', 'Ремонт авто'),
+(UUID(), 'subcategory', 'car_insurance', 'ru', 'Страховка авто'),
+-- Покупки
+(UUID(), 'subcategory', 'clothes', 'ru', 'Одежда'),
+(UUID(), 'subcategory', 'electronics', 'ru', 'Электроника'),
+(UUID(), 'subcategory', 'furniture', 'ru', 'Мебель'),
+(UUID(), 'subcategory', 'home_goods', 'ru', 'Товары для дома'),
+(UUID(), 'subcategory', 'books_shopping', 'ru', 'Книги'),
+(UUID(), 'subcategory', 'gifts', 'ru', 'Подарки'),
+-- Коммунальные услуги
+(UUID(), 'subcategory', 'electricity', 'ru', 'Электричество'),
+(UUID(), 'subcategory', 'water', 'ru', 'Вода'),
+(UUID(), 'subcategory', 'gas_utilities', 'ru', 'Газ'),
+(UUID(), 'subcategory', 'internet', 'ru', 'Интернет'),
+(UUID(), 'subcategory', 'phone', 'ru', 'Телефон'),
+(UUID(), 'subcategory', 'heating', 'ru', 'Отопление'),
+-- Здоровье
+(UUID(), 'subcategory', 'pharmacy', 'ru', 'Аптека'),
+(UUID(), 'subcategory', 'doctor', 'ru', 'Врач'),
+(UUID(), 'subcategory', 'dentist', 'ru', 'Стоматолог'),
+(UUID(), 'subcategory', 'hospital', 'ru', 'Больница'),
+(UUID(), 'subcategory', 'insurance_health', 'ru', 'Страхование'),
+(UUID(), 'subcategory', 'fitness', 'ru', 'Фитнес'),
+-- Развлечения
+(UUID(), 'subcategory', 'movies', 'ru', 'Кино'),
+(UUID(), 'subcategory', 'music', 'ru', 'Музыка'),
+(UUID(), 'subcategory', 'games', 'ru', 'Игры'),
+(UUID(), 'subcategory', 'hobbies', 'ru', 'Хобби'),
+(UUID(), 'subcategory', 'concerts', 'ru', 'Концерты'),
+(UUID(), 'subcategory', 'sports', 'ru', 'Спорт'),
+-- Образование
+(UUID(), 'subcategory', 'courses', 'ru', 'Курсы'),
+(UUID(), 'subcategory', 'books_education', 'ru', 'Учебники'),
+(UUID(), 'subcategory', 'tuition', 'ru', 'Обучение'),
+(UUID(), 'subcategory', 'certification', 'ru', 'Сертификация'),
+(UUID(), 'subcategory', 'workshops', 'ru', 'Мастер-классы'),
+-- Счета
+(UUID(), 'subcategory', 'credit_card', 'ru', 'Кредитная карта'),
+(UUID(), 'subcategory', 'loan', 'ru', 'Кредит'),
+(UUID(), 'subcategory', 'rent', 'ru', 'Аренда'),
+(UUID(), 'subcategory', 'subscriptions', 'ru', 'Подписки'),
+(UUID(), 'subcategory', 'services', 'ru', 'Услуги'),
+-- Личное
+(UUID(), 'subcategory', 'haircut', 'ru', 'Стрижка'),
+(UUID(), 'subcategory', 'beauty', 'ru', 'Красота'),
+(UUID(), 'subcategory', 'laundry', 'ru', 'Стирка'),
+(UUID(), 'subcategory', 'cleaning', 'ru', 'Уборка'),
+-- Путешествия
+(UUID(), 'subcategory', 'hotel', 'ru', 'Отель'),
+(UUID(), 'subcategory', 'airplane', 'ru', 'Авиабилеты'),
+(UUID(), 'subcategory', 'train', 'ru', 'Поезд'),
+(UUID(), 'subcategory', 'vacation', 'ru', 'Отдых')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
+-- Переводы для legacy подкатегорий на английский
+INSERT INTO translations (id, entityType, entityId, language, name) VALUES
+-- Еда и напитки
+(UUID(), 'subcategory', 'groceries', 'en', 'Groceries'),
+(UUID(), 'subcategory', 'restaurant', 'en', 'Restaurants'),
+(UUID(), 'subcategory', 'cafe', 'en', 'Cafe'),
+(UUID(), 'subcategory', 'alcohol', 'en', 'Alcohol'),
+(UUID(), 'subcategory', 'snacks', 'en', 'Snacks'),
+(UUID(), 'subcategory', 'delivery', 'en', 'Food Delivery'),
+-- Транспорт
+(UUID(), 'subcategory', 'gas', 'en', 'Gas'),
+(UUID(), 'subcategory', 'parking', 'en', 'Parking'),
+(UUID(), 'subcategory', 'public_transport', 'en', 'Public Transport'),
+(UUID(), 'subcategory', 'taxi', 'en', 'Taxi'),
+(UUID(), 'subcategory', 'car_repair', 'en', 'Car Repair'),
+(UUID(), 'subcategory', 'car_insurance', 'en', 'Car Insurance'),
+-- Покупки
+(UUID(), 'subcategory', 'clothes', 'en', 'Clothes'),
+(UUID(), 'subcategory', 'electronics', 'en', 'Electronics'),
+(UUID(), 'subcategory', 'furniture', 'en', 'Furniture'),
+(UUID(), 'subcategory', 'home_goods', 'en', 'Home Goods'),
+(UUID(), 'subcategory', 'books_shopping', 'en', 'Books'),
+(UUID(), 'subcategory', 'gifts', 'en', 'Gifts'),
+-- Коммунальные услуги
+(UUID(), 'subcategory', 'electricity', 'en', 'Electricity'),
+(UUID(), 'subcategory', 'water', 'en', 'Water'),
+(UUID(), 'subcategory', 'gas_utilities', 'en', 'Gas'),
+(UUID(), 'subcategory', 'internet', 'en', 'Internet'),
+(UUID(), 'subcategory', 'phone', 'en', 'Phone'),
+(UUID(), 'subcategory', 'heating', 'en', 'Heating'),
+-- Здоровье
+(UUID(), 'subcategory', 'pharmacy', 'en', 'Pharmacy'),
+(UUID(), 'subcategory', 'doctor', 'en', 'Doctor'),
+(UUID(), 'subcategory', 'dentist', 'en', 'Dentist'),
+(UUID(), 'subcategory', 'hospital', 'en', 'Hospital'),
+(UUID(), 'subcategory', 'insurance_health', 'en', 'Insurance'),
+(UUID(), 'subcategory', 'fitness', 'en', 'Fitness'),
+-- Развлечения
+(UUID(), 'subcategory', 'movies', 'en', 'Movies'),
+(UUID(), 'subcategory', 'music', 'en', 'Music'),
+(UUID(), 'subcategory', 'games', 'en', 'Games'),
+(UUID(), 'subcategory', 'hobbies', 'en', 'Hobbies'),
+(UUID(), 'subcategory', 'concerts', 'en', 'Concerts'),
+(UUID(), 'subcategory', 'sports', 'en', 'Sports'),
+-- Образование
+(UUID(), 'subcategory', 'courses', 'en', 'Courses'),
+(UUID(), 'subcategory', 'books_education', 'en', 'Textbooks'),
+(UUID(), 'subcategory', 'tuition', 'en', 'Tuition'),
+(UUID(), 'subcategory', 'certification', 'en', 'Certification'),
+(UUID(), 'subcategory', 'workshops', 'en', 'Workshops'),
+-- Счета
+(UUID(), 'subcategory', 'credit_card', 'en', 'Credit Card'),
+(UUID(), 'subcategory', 'loan', 'en', 'Loan'),
+(UUID(), 'subcategory', 'rent', 'en', 'Rent'),
+(UUID(), 'subcategory', 'subscriptions', 'en', 'Subscriptions'),
+(UUID(), 'subcategory', 'services', 'en', 'Services'),
+-- Личное
+(UUID(), 'subcategory', 'haircut', 'en', 'Haircut'),
+(UUID(), 'subcategory', 'beauty', 'en', 'Beauty'),
+(UUID(), 'subcategory', 'laundry', 'en', 'Laundry'),
+(UUID(), 'subcategory', 'cleaning', 'en', 'Cleaning'),
+-- Путешествия
+(UUID(), 'subcategory', 'hotel', 'en', 'Hotel'),
+(UUID(), 'subcategory', 'airplane', 'en', 'Airplane'),
+(UUID(), 'subcategory', 'train', 'en', 'Train'),
+(UUID(), 'subcategory', 'vacation', 'en', 'Vacation')
+ON DUPLICATE KEY UPDATE name=VALUES(name);

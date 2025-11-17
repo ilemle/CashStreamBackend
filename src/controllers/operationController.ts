@@ -262,15 +262,36 @@ export const getOperation = async (req: Request, res: Response, _next: NextFunct
 export const createOperation = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
+    
+    // Нормализуем categoryId и subcategoryId
+    // Для transfer операций категория не нужна
+    // Пустые строки и undefined преобразуем в null
+    let categoryId: string | null = null;
+    let subcategoryId: string | null = null;
+    
+    if (req.body.type === 'transfer') {
+      // Для переводов категория не используется
+      categoryId = null;
+      subcategoryId = null;
+    } else {
+      // Для income и expense нормализуем значения
+      categoryId = req.body.categoryId && req.body.categoryId.trim() !== '' 
+        ? req.body.categoryId.trim() 
+        : null;
+      subcategoryId = req.body.subcategoryId && req.body.subcategoryId.trim() !== '' 
+        ? req.body.subcategoryId.trim() 
+        : null;
+    }
+    
     const opData: IOperation = {
       title: req.body.title,
       amount: req.body.amount,
-      categoryId: req.body.categoryId,
-      subcategoryId: req.body.subcategoryId ,
+      categoryId: categoryId,
+      subcategoryId: subcategoryId,
       date:  new Date(),
-      timestamp: req.body.timestamp !,
+      timestamp: req.body.timestamp,
       type: req.body.type,
-      fromAccount: req.body.fromAccount ,
+      fromAccount: req.body.fromAccount,
       toAccount: req.body.toAccount,
       currency: req.body.currency || 'RUB',  // Валюта операции
       userId: req.user?.id || ''
@@ -315,9 +336,43 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     const oldAmount = Math.abs(existingOp.amount);
     const oldType = existingOp.type;
     
-    const newCategoryId = req.body.categoryId !== undefined ? req.body.categoryId : oldCategoryId;
+    // Нормализуем categoryId и subcategoryId при обновлении
+    let newCategoryId: string | null = oldCategoryId;
+    let newSubcategoryId: string | null = existingOp.subcategoryId || null;
+    
+    if (req.body.categoryId !== undefined) {
+      if (req.body.type === 'transfer' || (req.body.type === undefined && oldType === 'transfer')) {
+        // Для переводов категория не используется
+        newCategoryId = null;
+      } else {
+        // Нормализуем значение
+        newCategoryId = req.body.categoryId && String(req.body.categoryId).trim() !== '' 
+          ? String(req.body.categoryId).trim() 
+          : null;
+      }
+    }
+    
+    if (req.body.subcategoryId !== undefined) {
+      if (req.body.type === 'transfer' || (req.body.type === undefined && oldType === 'transfer')) {
+        // Для переводов подкатегория не используется
+        newSubcategoryId = null;
+      } else {
+        // Нормализуем значение
+        newSubcategoryId = req.body.subcategoryId && String(req.body.subcategoryId).trim() !== '' 
+          ? String(req.body.subcategoryId).trim() 
+          : null;
+      }
+    }
+    
     const newAmount = req.body.amount !== undefined ? Math.abs(req.body.amount) : oldAmount;
     const newType = req.body.type || oldType;
+    
+    // Подготавливаем данные для обновления с нормализованными значениями
+    const updateData = {
+      ...req.body,
+      categoryId: newCategoryId,
+      subcategoryId: newSubcategoryId
+    };
     
     // Откатываем старую операцию из бюджета (если была расходом)
     if (oldType === 'expense' && oldCategoryId && existingOp.userId) {
@@ -332,7 +387,7 @@ export const updateOperation = async (req: Request, res: Response, _next: NextFu
     }
     
     // Обновляем операцию
-    const op = await Operation.findByIdAndUpdate(req.params.id, req.body, language);
+    const op = await Operation.findByIdAndUpdate(req.params.id, updateData, language);
     
     // Добавляем новую операцию в бюджет (если расход)
     if (newType === 'expense' && newCategoryId && existingOp.userId) {
@@ -425,20 +480,40 @@ export const createOperationsBatch = async (req: Request, res: Response, _next: 
 
     console.log(`📦 Creating batch of ${operations.length} operations for userId: ${req.user?.id}`);
 
-    // Подготавливаем данные для создания
-    const operationsData: IOperation[] = operations.map((op: any) => ({
-      title: op.title,
-      amount: op.amount,
-      categoryId: op.categoryId || null,
-      subcategoryId: op.subcategoryId || null,
-      date: op.date,
-      timestamp: op.timestamp || undefined,
-      type: op.type,
-      fromAccount: op.fromAccount || undefined,
-      toAccount: op.toAccount || undefined,
-      currency: op.currency || 'RUB',
-      userId: req.user?.id || ''
-    }));
+    // Подготавливаем данные для создания с нормализацией categoryId и subcategoryId
+    const operationsData: IOperation[] = operations.map((op: any) => {
+      // Нормализуем categoryId и subcategoryId
+      let categoryId: string | null = null;
+      let subcategoryId: string | null = null;
+      
+      if (op.type === 'transfer') {
+        // Для переводов категория не используется
+        categoryId = null;
+        subcategoryId = null;
+      } else {
+        // Для income и expense нормализуем значения
+        categoryId = op.categoryId && String(op.categoryId).trim() !== '' 
+          ? String(op.categoryId).trim() 
+          : null;
+        subcategoryId = op.subcategoryId && String(op.subcategoryId).trim() !== '' 
+          ? String(op.subcategoryId).trim() 
+          : null;
+      }
+      
+      return {
+        title: op.title,
+        amount: op.amount,
+        categoryId: categoryId,
+        subcategoryId: subcategoryId,
+        date: op.date,
+        timestamp: op.timestamp || undefined,
+        type: op.type,
+        fromAccount: op.fromAccount || undefined,
+        toAccount: op.toAccount || undefined,
+        currency: op.currency || 'RUB',
+        userId: req.user?.id || ''
+      };
+    });
 
     // Создаем операции в транзакции
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';

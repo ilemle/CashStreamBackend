@@ -149,11 +149,19 @@ router.route('/').get(getOperations);
  *                 example: "2025-11-16 22:42:13"
  *               fromAccount:
  *                 type: string
- *                 description: Счет отправителя (для переводов)
+ *                 nullable: true
+ *                 description: |
+ *                   Счет-источник (откуда переводятся деньги). 
+ *                   Используется ТОЛЬКО для операций типа "transfer" (перевод между счетами).
+ *                   Для операций "income" и "expense" оставьте пустым или не указывайте.
  *                 example: "Основной счет"
  *               toAccount:
  *                 type: string
- *                 description: Счет получателя (для переводов)
+ *                 nullable: true
+ *                 description: |
+ *                   Счет-получатель (куда переводятся деньги). 
+ *                   Используется ТОЛЬКО для операций типа "transfer" (перевод между счетами).
+ *                   Для операций "income" и "expense" оставьте пустым или не указывайте.
  *                 example: "Сберегательный счет"
  *     responses:
  *       201:

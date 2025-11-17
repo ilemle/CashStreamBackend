@@ -123,8 +123,16 @@ const options = {
             },
             currency: { type: 'string' },
             date: { type: 'string', format: 'date-time' },
-            fromAccount: { type: 'string', nullable: true },
-            toAccount: { type: 'string', nullable: true },
+            fromAccount: { 
+              type: 'string', 
+              nullable: true,
+              description: 'Счет-источник (откуда). Используется только для операций типа "transfer"'
+            },
+            toAccount: { 
+              type: 'string', 
+              nullable: true,
+              description: 'Счет-получатель (куда). Используется только для операций типа "transfer"'
+            },
             userId: { type: 'string', format: 'uuid' }
           }
         },

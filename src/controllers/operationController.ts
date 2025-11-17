@@ -265,13 +265,13 @@ export const createOperation = async (req: Request, res: Response, _next: NextFu
     const opData: IOperation = {
       title: req.body.title,
       amount: req.body.amount,
-      categoryId: req.body.categoryId !== undefined ? req.body.categoryId : null,
-      subcategoryId: req.body.subcategoryId !== undefined ? req.body.subcategoryId : null,
-      date: req.body.date || new Date(),
-      timestamp: req.body.timestamp !== undefined ? req.body.timestamp : undefined,
+      categoryId: req.body.categoryId,
+      subcategoryId: req.body.subcategoryId ,
+      date:  new Date(),
+      timestamp: req.body.timestamp !,
       type: req.body.type,
-      fromAccount: req.body.fromAccount !== undefined ? req.body.fromAccount : undefined,
-      toAccount: req.body.toAccount !== undefined ? req.body.toAccount : undefined,
+      fromAccount: req.body.fromAccount ,
+      toAccount: req.body.toAccount,
       currency: req.body.currency || 'RUB',  // Валюта операции
       userId: req.user?.id || ''
     };

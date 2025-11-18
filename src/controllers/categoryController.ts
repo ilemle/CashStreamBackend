@@ -26,7 +26,7 @@ export const getCategories = async (req: Request, res: Response, _next: NextFunc
 export const createUserCategory = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const { name, icon } = req.body;
+    const { name, icon, color, type } = req.body;
     const language = (req.query.language as string) || (req.body.language as string) || 'ru';
 
     if (!name) {
@@ -34,10 +34,24 @@ export const createUserCategory = async (req: Request, res: Response, _next: Nex
       return;
     }
 
+    // Валидация типа категории
+    if (type && type !== 'income' && type !== 'expense') {
+      res.status(400).json({ message: 'Category type must be "income" or "expense"' });
+      return;
+    }
+
+    // Валидация цвета (если указан)
+    if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
+      res.status(400).json({ message: 'Color must be a valid HEX color (e.g., #FF5733)' });
+      return;
+    }
+
     const category = await CategoryModel.createCategory(
       {
         nameKey: '', // Будет сгенерирован автоматически
         icon,
+        color, // Если не указан, будет выбран автоматически
+        type: type || 'expense', // По умолчанию категория для расходов
         isSystem: false,
         userId,
       },

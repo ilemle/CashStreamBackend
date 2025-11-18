@@ -48,6 +48,8 @@ export interface CategoryTable {
   id: string; // CHAR(36) PRIMARY KEY (UUID)
   nameKey: string; // VARCHAR(255) NOT NULL UNIQUE (ключ для переводов, например 'category.food')
   icon: string | null; // VARCHAR(100)
+  color: string | null; // VARCHAR(7) HEX цвет категории (например, '#FF5733')
+  type: 'income' | 'expense'; // ENUM('income', 'expense') NOT NULL DEFAULT 'expense'
   isSystem: boolean; // BOOLEAN DEFAULT FALSE
   userId: string | null; // VARCHAR(36) (NULL для системных категорий)
   createdAt: Date; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP

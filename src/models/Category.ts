@@ -13,6 +13,8 @@ export interface ICategory {
   nameKey: string; // Ключ для переводов
   name: string; // Переведенное название (из translations или nameKey как fallback)
   icon?: string;
+  color?: string; // HEX цвет категории (например, '#FF5733')
+  type?: 'income' | 'expense'; // Тип категории: доход или расход
   subcategories?: ISubcategory[];
   isSystem: boolean; // Системная категория или пользовательская
   userId?: string; // Для пользовательских категорий
@@ -20,13 +22,58 @@ export interface ICategory {
 }
 
 class CategoryModel {
+  // Палитры цветов для категорий (уникальные для каждого типа)
+  private static readonly EXPENSE_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181',
+    '#AA96DA', '#FCBAD3', '#FFD93D', '#6BCB77', '#4D96FF',
+    '#FF9F43', '#10AC84', '#5F27CD', '#00D2D3', '#FF6348',
+    '#FFA502', '#2ED573', '#3742FA', '#A4B0BE', '#FF6B9D'
+  ];
+
+  private static readonly INCOME_COLORS = [
+    '#51CF66', '#339AF0', '#845EF7', '#FF922B', '#FCC419', '#868E96',
+    '#20C997', '#FD7E14', '#E83E8C', '#6610F2', '#6F42C1', '#E74C3C',
+    '#1ABC9C', '#3498DB', '#9B59B6', '#F39C12', '#E67E22', '#95A5A6'
+  ];
+
+  // Получить доступный цвет для категории (неиспользуемый в рамках типа)
+  private static async getAvailableColor(type: 'income' | 'expense', userId?: string): Promise<string> {
+    // Получаем все используемые цвета для категорий данного типа
+    let query = 'SELECT DISTINCT color FROM categories WHERE type = ? AND color IS NOT NULL';
+    const params: any[] = [type];
+    
+    if (userId) {
+      query += ' AND userId = ?';
+      params.push(userId);
+    } else {
+      query += ' AND isSystem = TRUE';
+    }
+    
+    const [rows] = await pool.execute(query, params);
+    const usedColors = new Set((rows as any[]).map((row: any) => row.color));
+    
+    // Выбираем палитру в зависимости от типа
+    const palette = type === 'income' ? this.INCOME_COLORS : this.EXPENSE_COLORS;
+    
+    // Находим первый неиспользуемый цвет
+    for (const color of palette) {
+      if (!usedColors.has(color)) {
+        return color;
+      }
+    }
+    
+    // Если все цвета использованы, возвращаем первый цвет из палитры
+    return palette[0];
+  }
+
   // Получить системные категории с переводами
-  static async getSystemCategories(language: string = 'ru'): Promise<ICategory[]> {
-    const [rows] = await pool.execute(
-      `SELECT 
+  static async getSystemCategories(language: string = 'ru', operationType?: 'income' | 'expense'): Promise<ICategory[]> {
+    let query = `SELECT 
         c.id,
         c.nameKey,
         c.icon,
+        c.color,
+        c.type,
         c.isSystem,
         c.userId,
         c.createdAt,
@@ -35,20 +82,30 @@ class CategoryModel {
       LEFT JOIN translations t ON t.entityType = 'category' 
         AND t.entityId = c.id 
         AND t.language = ?
-      WHERE c.isSystem = TRUE 
-      ORDER BY c.nameKey`,
-      [language]
-    );
+      WHERE c.isSystem = TRUE`;
+    
+    const params: any[] = [language];
+    
+    // Фильтруем по типу операции, если указан
+    if (operationType) {
+      query += ' AND c.type = ?';
+      params.push(operationType);
+    }
+    
+    query += ' ORDER BY c.nameKey';
+    
+    const [rows] = await pool.execute(query, params);
     return rows as ICategory[];
   }
 
   // Получить пользовательские категории с переводами
-  static async getUserCategories(userId: string, language: string = 'ru'): Promise<ICategory[]> {
-    const [rows] = await pool.execute(
-      `SELECT 
+  static async getUserCategories(userId: string, language: string = 'ru', operationType?: 'income' | 'expense'): Promise<ICategory[]> {
+    let query = `SELECT 
         c.id,
         c.nameKey,
         c.icon,
+        c.color,
+        c.type,
         c.isSystem,
         c.userId,
         c.createdAt,
@@ -57,10 +114,19 @@ class CategoryModel {
       LEFT JOIN translations t ON t.entityType = 'category' 
         AND t.entityId = c.id 
         AND t.language = ?
-      WHERE c.userId = ? 
-      ORDER BY c.nameKey`,
-      [language, userId]
-    );
+      WHERE c.userId = ?`;
+    
+    const params: any[] = [language, userId];
+    
+    // Фильтруем по типу операции, если указан
+    if (operationType) {
+      query += ' AND c.type = ?';
+      params.push(operationType);
+    }
+    
+    query += ' ORDER BY c.nameKey';
+    
+    const [rows] = await pool.execute(query, params);
     return rows as ICategory[];
   }
 
@@ -72,6 +138,8 @@ class CategoryModel {
         c.id,
         c.nameKey,
         c.icon,
+        c.color,
+        c.type,
         c.isSystem,
         c.userId,
         c.createdAt,
@@ -116,37 +184,13 @@ class CategoryModel {
 
   // Получить все категории (системные + пользовательские) с подкатегориями и переводами
   static async getAllCategoriesWithSubcategories(userId: string | null, language: string = 'ru', operationType?: 'income' | 'expense'): Promise<ICategory[]> {
-    // Получаем системные категории
-    const systemCategories = await this.getSystemCategories(language);
-    
-    // Фильтруем по типу операции, если указан
-    let filteredSystemCategories = systemCategories;
-    if (operationType === 'income') {
-      // Для доходов используем только категории доходов (по nameKey)
-      filteredSystemCategories = systemCategories.filter(c => 
-        c.nameKey.startsWith('category.salary') ||
-        c.nameKey.startsWith('category.business') ||
-        c.nameKey.startsWith('category.investment') ||
-        c.nameKey.startsWith('category.freelance') ||
-        c.nameKey.startsWith('category.bonus') ||
-        c.nameKey.startsWith('category.other')
-      );
-    } else if (operationType === 'expense') {
-      // Для расходов используем только категории расходов
-      filteredSystemCategories = systemCategories.filter(c => 
-        !c.nameKey.startsWith('category.salary') &&
-        !c.nameKey.startsWith('category.business') &&
-        !c.nameKey.startsWith('category.investment') &&
-        !c.nameKey.startsWith('category.freelance') &&
-        !c.nameKey.startsWith('category.bonus') &&
-        !c.nameKey.startsWith('category.other')
-      );
-    }
+    // Получаем системные категории с фильтрацией по типу
+    const systemCategories = await this.getSystemCategories(language, operationType);
 
-    // Получаем пользовательские категории
+    // Получаем пользовательские категории с фильтрацией по типу
     let userCategories: ICategory[] = [];
     if (userId) {
-      userCategories = await this.getUserCategories(userId, language);
+      userCategories = await this.getUserCategories(userId, language, operationType);
       // Добавляем подкатегории для пользовательских категорий
       for (let i = 0; i < userCategories.length; i++) {
         const categoryWithSubs = await this.getCategoryWithSubcategories(userCategories[i].id!, language);
@@ -157,24 +201,31 @@ class CategoryModel {
     }
 
     // Добавляем подкатегории для системных категорий
-    for (let i = 0; i < filteredSystemCategories.length; i++) {
-      const categoryWithSubs = await this.getCategoryWithSubcategories(filteredSystemCategories[i].id!, language);
+    for (let i = 0; i < systemCategories.length; i++) {
+      const categoryWithSubs = await this.getCategoryWithSubcategories(systemCategories[i].id!, language);
       if (categoryWithSubs) {
-        filteredSystemCategories[i] = categoryWithSubs;
+        systemCategories[i] = categoryWithSubs;
       }
     }
 
-    return [...filteredSystemCategories, ...userCategories];
+    return [...systemCategories, ...userCategories];
   }
 
   // Создать пользовательскую категорию
   static async createCategory(data: Omit<ICategory, 'id' | 'name'>, name: string, language: string = 'ru'): Promise<ICategory> {
     const id = uuidv4();
     const nameKey = `category.user.${id}`; // Генерируем уникальный nameKey
+    const type = data.type || 'expense'; // По умолчанию категория для расходов
+    
+    // Если цвет не указан, выбираем уникальный цвет автоматически
+    let color = data.color;
+    if (!color) {
+      color = await this.getAvailableColor(type, data.userId);
+    }
     
     await pool.execute(
-      'INSERT INTO categories (id, nameKey, icon, isSystem, userId) VALUES (?, ?, ?, ?, ?)',
-      [id, nameKey, data.icon || null, false, data.userId]
+      'INSERT INTO categories (id, nameKey, icon, color, type, isSystem, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, nameKey, data.icon || null, color, type, false, data.userId]
     );
 
     // Создаем перевод для указанного языка
@@ -183,7 +234,7 @@ class CategoryModel {
       ['category', id, language, name]
     );
 
-    return { ...data, id, nameKey, name };
+    return { ...data, id, nameKey, name, color };
   }
 
   // Создать подкатегорию
@@ -210,10 +261,20 @@ class CategoryModel {
     const sets: string[] = [];
     const values: any[] = [];
 
-    // Обновляем только icon (nameKey нельзя менять, name обновляется через translations)
+    // Обновляем icon, color и type (nameKey нельзя менять, name обновляется через translations)
     if (data.icon !== undefined) {
       sets.push('icon = ?');
       values.push(data.icon);
+    }
+    
+    if (data.color !== undefined) {
+      sets.push('color = ?');
+      values.push(data.color);
+    }
+    
+    if (data.type !== undefined) {
+      sets.push('type = ?');
+      values.push(data.type);
     }
 
     // Обновляем перевод, если передан name

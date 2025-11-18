@@ -36,12 +36,15 @@ CREATE TABLE IF NOT EXISTS categories (
   id CHAR(36) PRIMARY KEY, -- UUID для уникальности
   nameKey VARCHAR(255) NOT NULL UNIQUE, -- Уникальный ключ для переводов (например, 'category.food')
   icon VARCHAR(100),
+  color VARCHAR(7), -- HEX цвет категории (например, '#FF5733')
+  type ENUM('income', 'expense') NOT NULL DEFAULT 'expense', -- Тип категории: доход или расход
   isSystem BOOLEAN DEFAULT FALSE,
   userId VARCHAR(36),
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user (userId),
   INDEX idx_system (isSystem),
   INDEX idx_nameKey (nameKey),
+  INDEX idx_type (type), -- Индекс для фильтрации по типу
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -214,18 +217,18 @@ CREATE TABLE IF NOT EXISTS telegram_auth_sessions (
 -- SYSTEM CATEGORIES (with UUID and translations)
 -- ============================================================================
 
--- Системные категории для расходов
-INSERT INTO categories (id, nameKey, icon, isSystem) VALUES
-('550e8400-e29b-41d4-a716-446655440001', 'category.food', 'restaurant', TRUE),
-('550e8400-e29b-41d4-a716-446655440002', 'category.transport', 'directions-car', TRUE),
-('550e8400-e29b-41d4-a716-446655440003', 'category.shopping', 'shopping-cart', TRUE),
-('550e8400-e29b-41d4-a716-446655440004', 'category.utilities', 'home', TRUE),
-('550e8400-e29b-41d4-a716-446655440005', 'category.health', 'favorite', TRUE),
-('550e8400-e29b-41d4-a716-446655440006', 'category.entertainment', 'sports-esports', TRUE),
-('550e8400-e29b-41d4-a716-446655440007', 'category.education', 'school', TRUE),
-('550e8400-e29b-41d4-a716-446655440008', 'category.bills', 'receipt', TRUE),
-('550e8400-e29b-41d4-a716-446655440009', 'category.personal', 'person', TRUE),
-('550e8400-e29b-41d4-a716-446655440010', 'category.travel', 'flight', TRUE)
+-- Системные категории для расходов (с уникальными цветами)
+INSERT INTO categories (id, nameKey, icon, color, type, isSystem) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'category.food', 'restaurant', '#FF6B6B', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440002', 'category.transport', 'directions-car', '#4ECDC4', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440003', 'category.shopping', 'shopping-cart', '#FFE66D', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440004', 'category.utilities', 'home', '#95E1D3', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440005', 'category.health', 'favorite', '#F38181', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440006', 'category.entertainment', 'sports-esports', '#AA96DA', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440007', 'category.education', 'school', '#FCBAD3', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440008', 'category.bills', 'receipt', '#FFD93D', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440009', 'category.personal', 'person', '#6BCB77', 'expense', TRUE),
+('550e8400-e29b-41d4-a716-446655440010', 'category.travel', 'flight', '#4D96FF', 'expense', TRUE)
 ON DUPLICATE KEY UPDATE id=id;
 
 -- Переводы категорий на русский
@@ -256,14 +259,14 @@ INSERT INTO translations (id, entityType, entityId, language, name) VALUES
 (UUID(), 'category', '550e8400-e29b-41d4-a716-446655440010', 'en', 'Travel')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
--- Системные категории для доходов
-INSERT INTO categories (id, nameKey, icon, isSystem) VALUES
-('550e8400-e29b-41d4-a716-446655440011', 'category.salary', 'work', TRUE),
-('550e8400-e29b-41d4-a716-446655440012', 'category.business', 'store', TRUE),
-('550e8400-e29b-41d4-a716-446655440013', 'category.investment', 'trending-up', TRUE),
-('550e8400-e29b-41d4-a716-446655440014', 'category.freelance', 'laptop', TRUE),
-('550e8400-e29b-41d4-a716-446655440015', 'category.bonus', 'stars', TRUE),
-('550e8400-e29b-41d4-a716-446655440016', 'category.other', 'more', TRUE)
+-- Системные категории для доходов (с уникальными цветами)
+INSERT INTO categories (id, nameKey, icon, color, type, isSystem) VALUES
+('550e8400-e29b-41d4-a716-446655440011', 'category.salary', 'work', '#51CF66', 'income', TRUE),
+('550e8400-e29b-41d4-a716-446655440012', 'category.business', 'store', '#339AF0', 'income', TRUE),
+('550e8400-e29b-41d4-a716-446655440013', 'category.investment', 'trending-up', '#845EF7', 'income', TRUE),
+('550e8400-e29b-41d4-a716-446655440014', 'category.freelance', 'laptop', '#FF922B', 'income', TRUE),
+('550e8400-e29b-41d4-a716-446655440015', 'category.bonus', 'stars', '#FCC419', 'income', TRUE),
+('550e8400-e29b-41d4-a716-446655440016', 'category.other', 'more', '#868E96', 'income', TRUE)
 ON DUPLICATE KEY UPDATE id=id;
 
 -- Переводы категорий доходов на русский
@@ -292,29 +295,29 @@ ON DUPLICATE KEY UPDATE name=VALUES(name);
 -- Добавляем категории со старыми строковыми ID для обратной совместимости
 -- Эти категории ссылаются на те же UUID категории через nameKey
 
--- Категории расходов со старыми ID
-INSERT INTO categories (id, nameKey, icon, isSystem) VALUES
-('food', 'category.food', 'restaurant', TRUE),
-('transport', 'category.transport', 'directions-car', TRUE),
-('shopping', 'category.shopping', 'shopping-cart', TRUE),
-('utilities', 'category.utilities', 'home', TRUE),
-('health', 'category.health', 'favorite', TRUE),
-('entertainment', 'category.entertainment', 'sports-esports', TRUE),
-('education', 'category.education', 'school', TRUE),
-('bills', 'category.bills', 'receipt', TRUE),
-('personal', 'category.personal', 'person', TRUE),
-('travel', 'category.travel', 'flight', TRUE)
-ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+-- Категории расходов со старыми ID (с теми же цветами, что и UUID версии)
+INSERT INTO categories (id, nameKey, icon, color, type, isSystem) VALUES
+('food', 'category.food', 'restaurant', '#FF6B6B', 'expense', TRUE),
+('transport', 'category.transport', 'directions-car', '#4ECDC4', 'expense', TRUE),
+('shopping', 'category.shopping', 'shopping-cart', '#FFE66D', 'expense', TRUE),
+('utilities', 'category.utilities', 'home', '#95E1D3', 'expense', TRUE),
+('health', 'category.health', 'favorite', '#F38181', 'expense', TRUE),
+('entertainment', 'category.entertainment', 'sports-esports', '#AA96DA', 'expense', TRUE),
+('education', 'category.education', 'school', '#FCBAD3', 'expense', TRUE),
+('bills', 'category.bills', 'receipt', '#FFD93D', 'expense', TRUE),
+('personal', 'category.personal', 'person', '#6BCB77', 'expense', TRUE),
+('travel', 'category.travel', 'flight', '#4D96FF', 'expense', TRUE)
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey), type=VALUES(type), color=VALUES(color);
 
--- Категории доходов со старыми ID
-INSERT INTO categories (id, nameKey, icon, isSystem) VALUES
-('salary', 'category.salary', 'work', TRUE),
-('business', 'category.business', 'store', TRUE),
-('investment', 'category.investment', 'trending-up', TRUE),
-('freelance', 'category.freelance', 'laptop', TRUE),
-('bonus', 'category.bonus', 'stars', TRUE),
-('other', 'category.other', 'more', TRUE)
-ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey);
+-- Категории доходов со старыми ID (с теми же цветами, что и UUID версии)
+INSERT INTO categories (id, nameKey, icon, color, type, isSystem) VALUES
+('salary', 'category.salary', 'work', '#51CF66', 'income', TRUE),
+('business', 'category.business', 'store', '#339AF0', 'income', TRUE),
+('investment', 'category.investment', 'trending-up', '#845EF7', 'income', TRUE),
+('freelance', 'category.freelance', 'laptop', '#FF922B', 'income', TRUE),
+('bonus', 'category.bonus', 'stars', '#FCC419', 'income', TRUE),
+('other', 'category.other', 'more', '#868E96', 'income', TRUE)
+ON DUPLICATE KEY UPDATE nameKey=VALUES(nameKey), type=VALUES(type), color=VALUES(color);
 
 -- Переводы для старых категорий расходов
 INSERT INTO translations (id, entityType, entityId, language, name) VALUES

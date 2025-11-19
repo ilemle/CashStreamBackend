@@ -136,6 +136,15 @@ export const CATEGORIES = [
       { id: 'vacation', name: 'Отдых' },
     ],
   },
+  {
+    id: 'debts',
+    name: 'Долги',
+    icon: 'account-balance',
+    isSystem: true,
+    subcategories: [
+      { id: 'lent_money', name: 'Дал в долг' },
+    ],
+  },
 ];
 
 export const INCOME_CATEGORIES = [
@@ -144,36 +153,68 @@ export const INCOME_CATEGORIES = [
     name: 'Зарплата',
     icon: 'work',
     isSystem: true,
+    subcategories: [
+      { id: 'main_salary', name: 'Основная зарплата' },
+      { id: 'overtime', name: 'Сверхурочные' },
+      { id: 'bonus_pay', name: 'Премия' },
+    ],
   },
   {
     id: 'business',
     name: 'Бизнес',
     icon: 'store',
     isSystem: true,
+    subcategories: [
+      { id: 'product_sales', name: 'Продажа товаров' },
+      { id: 'service_income', name: 'Доход от услуг' },
+      { id: 'business_profit', name: 'Прибыль бизнеса' },
+    ],
   },
   {
     id: 'investment',
     name: 'Инвестиции',
     icon: 'trending-up',
     isSystem: true,
+    subcategories: [
+      { id: 'dividends', name: 'Дивиденды' },
+      { id: 'capital_gains', name: 'Доход от продажи активов' },
+      { id: 'interest_income', name: 'Проценты по вкладам' },
+    ],
   },
   {
     id: 'freelance',
     name: 'Фриланс',
     icon: 'laptop',
     isSystem: true,
+    subcategories: [
+      { id: 'web_development', name: 'Веб-разработка' },
+      { id: 'design', name: 'Дизайн' },
+      { id: 'consulting', name: 'Консалтинг' },
+      { id: 'writing', name: 'Копирайтинг' },
+    ],
   },
   {
     id: 'bonus',
     name: 'Бонусы',
     icon: 'stars',
     isSystem: true,
+    subcategories: [
+      { id: 'performance_bonus', name: 'Премия за эффективность' },
+      { id: 'year_end_bonus', name: 'Годовая премия' },
+      { id: 'commission', name: 'Комиссионные' },
+    ],
   },
   {
     id: 'other',
     name: 'Другое',
     icon: 'more',
     isSystem: true,
+    subcategories: [
+      { id: 'gifts', name: 'Подарки' },
+      { id: 'refunds', name: 'Возвраты' },
+      { id: 'found_money', name: 'Найденные деньги' },
+      { id: 'prize_winnings', name: 'Выигрыши' },
+    ],
   },
 ];
 

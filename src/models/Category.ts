@@ -79,8 +79,8 @@ class CategoryModel {
         c.createdAt,
         COALESCE(t.name, c.nameKey) as name
       FROM categories c
-      LEFT JOIN translations t ON t.entityType = 'category' 
-        AND t.entityId = c.id 
+      LEFT JOIN translations t ON t.entityType = 'category'
+        AND t.entityId = c.id
         AND t.language = ?
       WHERE c.isSystem = TRUE`;
     
@@ -111,8 +111,8 @@ class CategoryModel {
         c.createdAt,
         COALESCE(t.name, c.nameKey) as name
       FROM categories c
-      LEFT JOIN translations t ON t.entityType = 'category' 
-        AND t.entityId = c.id 
+      LEFT JOIN translations t ON t.entityType = 'category'
+        AND t.entityId = c.id
         AND t.language = ?
       WHERE c.userId = ?`;
     
@@ -134,7 +134,7 @@ class CategoryModel {
   static async getCategoryWithSubcategories(categoryId: string, language: string = 'ru'): Promise<ICategory | null> {
     // Получить основную категорию с переводом
     const [categoryRows] = await pool.execute(
-      `SELECT 
+      `SELECT
         c.id,
         c.nameKey,
         c.icon,
@@ -145,8 +145,8 @@ class CategoryModel {
         c.createdAt,
         COALESCE(t.name, c.nameKey) as name
       FROM categories c
-      LEFT JOIN translations t ON t.entityType = 'category' 
-        AND t.entityId = c.id 
+      LEFT JOIN translations t ON t.entityType = 'category'
+        AND t.entityId = c.id
         AND t.language = ?
       WHERE c.id = ?`,
       [language, categoryId]
@@ -159,7 +159,7 @@ class CategoryModel {
 
     // Получить подкатегории с переводами
     const [subcategoryRows] = await pool.execute(
-      `SELECT 
+      `SELECT
         s.id,
         s.categoryId,
         s.nameKey,
@@ -167,10 +167,10 @@ class CategoryModel {
         s.createdAt,
         COALESCE(t.name, s.nameKey) as name
       FROM subcategories s
-      LEFT JOIN translations t ON t.entityType = 'subcategory' 
-        AND t.entityId = s.id 
+      LEFT JOIN translations t ON t.entityType = 'subcategory'
+        AND t.entityId = s.id
         AND t.language = ?
-      WHERE s.categoryId = ? 
+      WHERE s.categoryId = ?
       ORDER BY s.nameKey`,
       [language, categoryId]
     );
